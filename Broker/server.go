@@ -30,7 +30,6 @@ func (server *Server) Start() {
 	} else {
 		fmt.Println("Broker is running on port :", server.port)
 	}
-	defer server.listener.Close()
 
 	go server.acceptConnections()
 }
