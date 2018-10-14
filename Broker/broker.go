@@ -1,24 +1,31 @@
-package brocker
+package main
 
-import "net"
+import (
+	"./components"
+	"net"
+)
 
 type Broker struct {
-	server *Server
+	server *broker.Server
 }
 
-func (broker *Broker) Start() {
+func main() {
+	Broker := Broker{}
+	Broker.Start()
+}
 
-	broker.server = &Server{host: DEFAULT_HOST, port: DEFAULT_PORT, connectionType: DEFAULT_TYPE}
-	broker.server.Start()
-	defer broker.server.listener.Close()
-	broker.listen()
+func (Broker *Broker) Start() {
+	Broker.server = &broker.Server{Host: broker.DEFAULT_HOST, Port: broker.DEFAULT_PORT, ConnectionType: broker.DEFAULT_TYPE}
+	Broker.server.Start()
+	defer Broker.server.Listener.Close()
+	Broker.listen()
 
 }
 
-func (broker *Broker) listen() {
+func (Broker *Broker) listen() {
 	for {
 		select {
-		case connection := <-broker.server.connections:
+		case connection := <-Broker.server.Connections:
 			go register(connection)
 
 		}
@@ -27,5 +34,5 @@ func (broker *Broker) listen() {
 
 func register(connection net.Conn) {
 	connection.Write([]byte("Welcome to Matrix chat!\n"))
-	connection.Write([]byte("Select a nickname: "))
+	connection.Write([]byte("Select a nickname:\n"))
 }
