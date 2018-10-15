@@ -10,8 +10,9 @@ import (
 )
 
 type Broker struct {
-	server *broker.Server
-	users  []entity.User
+	server   *broker.Server
+	users    []entity.User
+	channels map[int]*broker.Channel
 }
 
 func main() {
@@ -23,6 +24,9 @@ func (Broker *Broker) Start() {
 	Broker.server = &broker.Server{Host: broker.DEFAULT_HOST, Port: broker.DEFAULT_PORT, ConnectionType: broker.DEFAULT_TYPE}
 	Broker.server.Start()
 	defer Broker.server.Listener.Close()
+
+	Broker.channels = make(map[int]*broker.Channel)
+	Broker.channels[0] = &broker.Channel{Id: 0, Name: "random"}
 	Broker.listen()
 
 }
@@ -46,9 +50,12 @@ func (Broker *Broker) register(connection net.Conn) {
 	decoder := json.NewDecoder(connection)
 	var user models.User
 	decoder.Decode(&user)
-	Broker.users = append(Broker.users, entity.User{Id: user.Id,
+	newUser := entity.User{Id: user.Id,
 		NickName:   user.NickName,
-		Connection: connection})
+		Connection: connection}
+
+	Broker.users = append(Broker.users, newUser)
+	Broker.channels[0].Subscribers = Broker.users
 }
 
 //TODO: Create Channels(Rooms), Show all users and rooms of user at connecting to broker,
