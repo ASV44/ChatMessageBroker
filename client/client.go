@@ -1,10 +1,15 @@
 package main
 
 import (
+	"ChatMessageBroker/client/models"
+	"ChatMessageBroker/client/models/receiver"
+	"ChatMessageBroker/client/models/sender"
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"net"
 	"os"
+	"time"
 )
 
 const (
@@ -15,10 +20,12 @@ const (
 
 type Client struct {
 	connection net.Conn
+	user       models.User
 }
 
 func main() {
 	client := Client{}
+
 	client.Start(DEFAULT_TYPE, DEFAULT_HOST, DEFAULT_PORT)
 }
 
@@ -30,13 +37,27 @@ func (client *Client) Start(connectionType string, host string, port string) {
 		os.Exit(1)
 	}
 
-	for {
-		//reader := bufio.NewReader(os.Stdin)
-		//text, _ := reader.ReadString('\n')
-		//fmt.Fprintf(conn, text + "\n")
-		//// listen for reply
-		message, _ := bufio.NewReader(client.connection).ReadString('\n')
-		fmt.Print("Message from server: " + message)
-	}
+	go client.listen(bufio.NewReader(client.connection), client.onMessageReceive)
+	client.listen(bufio.NewReader(os.Stdin), client.sendMessage)
 
+}
+
+func (client *Client) listen(reader *bufio.Reader, handler func(data []byte)) {
+	for {
+		data, _ := reader.ReadBytes('\n')
+		fmt.Print("Receive from input: " + string(data))
+		handler(data)
+	}
+}
+
+func (client *Client) onMessageReceive(data []byte) {
+	var message receiver.Message
+	json.Unmarshal(data, &message)
+
+}
+
+func (client *Client) sendMessage(data []byte) {
+	message := sender.Message{Sender: client.user, Text: string(data), Time: time.Now()}
+	jsonData, _ := json.Marshal(message)
+	client.connection.Write(jsonData)
 }

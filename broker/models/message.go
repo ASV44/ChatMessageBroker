@@ -1,0 +1,15 @@
+package models
+
+import "time"
+
+const (
+	SYSTEM        = "system"
+	COMMUNICATION = "communication"
+)
+
+type Message struct {
+	Type   string    `json:"type"`
+	Sender User      `json:"user"`
+	Text   string    `json:"text"`
+	Time   time.Time `json:"time"`
+}
