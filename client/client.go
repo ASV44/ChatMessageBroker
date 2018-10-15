@@ -37,9 +37,27 @@ func (client *Client) Start(connectionType string, host string, port string) {
 		os.Exit(1)
 	}
 
-	go client.listen(bufio.NewReader(client.connection), client.onMessageReceive)
-	client.listen(bufio.NewReader(os.Stdin), client.sendMessage)
+	socketReader := bufio.NewReader(client.connection)
+	inputReader := bufio.NewReader(os.Stdin)
 
+	client.registerUser(socketReader, inputReader)
+
+	go client.listen(socketReader, client.onMessageReceive)
+	client.listen(inputReader, client.sendMessage)
+
+}
+
+func (client *Client) registerUser(socketReader *bufio.Reader, inputReader *bufio.Reader) {
+	data, _ := socketReader.ReadBytes('\n')
+	var registerMessage receiver.Register
+	json.Unmarshal(data, &registerMessage)
+	fmt.Println("Connected at: " + registerMessage.Time.Format("15:04:05 2006-01-02"))
+	fmt.Print(registerMessage.Text)
+
+	nickName, _ := inputReader.ReadString('\n')
+	user := models.User{Id: registerMessage.UserId, NickName: nickName}
+	userJson, _ := json.Marshal(user)
+	client.connection.Write(userJson)
 }
 
 func (client *Client) listen(reader *bufio.Reader, handler func(data []byte)) {
@@ -61,3 +79,5 @@ func (client *Client) sendMessage(data []byte) {
 	jsonData, _ := json.Marshal(message)
 	client.connection.Write(jsonData)
 }
+
+//TODO: Implement commands /open {room} /start {name} /create {room}
