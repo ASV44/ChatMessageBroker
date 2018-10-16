@@ -7,11 +7,10 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net"
 	"os"
-	"os/signal"
 	"strings"
-	"syscall"
 	"time"
 )
 
@@ -43,8 +42,6 @@ func (client *Client) Start(connectionType string, host string, port string) {
 		os.Exit(1)
 	}
 
-	go client.sigIntHandler()
-
 	client.decoder = json.NewDecoder(client.connection)
 	client.inputReader = bufio.NewReader(os.Stdin)
 
@@ -52,14 +49,6 @@ func (client *Client) Start(connectionType string, host string, port string) {
 
 	go client.listenConnection()
 	client.listenUserInput()
-}
-
-func (client *Client) sigIntHandler() {
-	ch := make(chan os.Signal)
-	signal.Notify(ch, syscall.SIGINT)
-	<-ch
-	client.connection.Close()
-	os.Exit(0)
 }
 
 func (client *Client) registerUser() {
@@ -77,7 +66,11 @@ func (client *Client) registerUser() {
 func (client *Client) listenConnection() {
 	var message receiver.Message
 	for {
-		client.decoder.Decode(&message)
+		if err := client.decoder.Decode(&message); err != io.EOF {
+			client.showReceivedMessage(message)
+		} else {
+			return
+		}
 	}
 }
 
@@ -123,4 +116,14 @@ func (client *Client) sendMessage(messageType string, target string, text string
 	client.connection.Write(jsonData)
 }
 
-//TODO: Implement commands /open {room} /start {name} /create {room}
+func (client *Client) showReceivedMessage(message receiver.Message) {
+	if message.Channel != "" {
+		fmt.Printf("#%s", message.Channel)
+	}
+	if message.Sender != "" {
+		fmt.Printf("@%s", message.Sender)
+	}
+	if message.Text != "" {
+		fmt.Printf(": %s\n", message.Text)
+	}
+}

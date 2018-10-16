@@ -8,16 +8,17 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"strings"
 	"time"
 )
 
 type Broker struct {
 	server            *broker.Server
-	users             []entity.User
 	incoming          chan models.IncomingMessage
-	channels          map[int]*broker.Channel
-	messageDispatcher map[string]func(message models.IncomingMessage)
-	commandDispatcher map[string]func(param string)
+	users             map[string]entity.User
+	channels          map[string]*broker.Channel
+	messageDispatcher map[string]func(models.IncomingMessage)
+	commandDispatcher map[string]func(models.User, string)
 }
 
 func main() {
@@ -31,15 +32,17 @@ func (Broker *Broker) Start() {
 	defer Broker.server.Listener.Close()
 
 	Broker.initMessageDispatcher()
+	Broker.initCommandDispatcher()
 	Broker.incoming = make(chan models.IncomingMessage)
-	Broker.channels = make(map[int]*broker.Channel)
-	Broker.channels[0] = &broker.Channel{Id: 0, Name: "random"}
+	Broker.users = make(map[string]entity.User)
+	Broker.channels = make(map[string]*broker.Channel)
+	Broker.channels["random"] = &broker.Channel{Id: 0, Name: "random"}
 	Broker.run()
 
 }
 
 func (Broker *Broker) initMessageDispatcher() {
-	Broker.messageDispatcher = make(map[string]func(message models.IncomingMessage))
+	Broker.messageDispatcher = make(map[string]func(models.IncomingMessage))
 
 	Broker.messageDispatcher[models.CMD] = Broker.handleCommand
 	Broker.messageDispatcher[models.DIRECT] = Broker.handleDirectMessage
@@ -47,11 +50,12 @@ func (Broker *Broker) initMessageDispatcher() {
 }
 
 func (Broker *Broker) initCommandDispatcher() {
-	Broker.commandDispatcher = make(map[string]func(param string))
+	Broker.commandDispatcher = make(map[string]func(models.User, string))
 
-	Broker.commandDispatcher["create"] = Broker.handleCommand
-	Broker.messageDispatcher[models.DIRECT] = Broker.handleDirectMessage
-	Broker.messageDispatcher[models.CHANNEL] = Broker.handleChannelMessage
+	Broker.commandDispatcher["create"] = Broker.createChannel
+	Broker.commandDispatcher["join"] = Broker.joinChannel
+	Broker.commandDispatcher["leave"] = Broker.leaveChannel
+	Broker.commandDispatcher["show"] = Broker.show
 }
 
 func (Broker *Broker) listen(connection net.Conn) {
@@ -72,7 +76,7 @@ func (Broker *Broker) run() {
 		case connection := <-Broker.server.Connections:
 			go Broker.register(connection)
 		case message := <-Broker.incoming:
-			go Broker.handleIncomingMessages(message)
+			go Broker.messageDispatcher[message.Type](message)
 		}
 	}
 }
@@ -81,7 +85,7 @@ func (Broker *Broker) register(connection net.Conn) {
 	text := "Welcome to Matrix workspace!\nEnter nickname:"
 	message := models.Register{UserId: len(Broker.users), Text: text, Time: time.Now()}
 	data, _ := json.Marshal(message)
-	connection.Write(append(data, '\n'))
+	connection.Write(data)
 
 	decoder := json.NewDecoder(connection)
 	var user models.User
@@ -90,19 +94,22 @@ func (Broker *Broker) register(connection net.Conn) {
 		NickName:   user.NickName,
 		Connection: connection}
 
-	Broker.users = append(Broker.users, newUser)
-	Broker.channels[0].Subscribers = Broker.users
+	Broker.users[newUser.NickName] = newUser
+	subscribers := Broker.channels["random"].Subscribers
+	Broker.channels["random"].Subscribers = append(subscribers, newUser)
+	Broker.show(user, "all")
 
 	go Broker.listen(connection)
 	fmt.Printf("Connected user %s Id: %d\n", newUser.NickName, newUser.Id)
 }
 
-func (Broker *Broker) handleIncomingMessages(message models.IncomingMessage) {
-	fmt.Println(message.Type, message.Target, message.Sender, message.Text, message.Time)
+func (Broker *Broker) sendMessage(connection net.Conn, message models.OutcomingMessage) {
+	data, _ := json.Marshal(message)
+	connection.Write(data)
 }
 
 func (Broker *Broker) handleCommand(message models.IncomingMessage) {
-
+	Broker.commandDispatcher[message.Target](message.Sender, message.Text)
 }
 
 func (Broker *Broker) handleDirectMessage(message models.IncomingMessage) {
@@ -113,20 +120,44 @@ func (Broker *Broker) handleChannelMessage(message models.IncomingMessage) {
 
 }
 
-func (Broker *Broker) createChannel(name string) {
+func (Broker *Broker) createChannel(sender models.User, name string) {
 
 }
 
-func (Broker *Broker) joinChannel(name string) {
+func (Broker *Broker) joinChannel(sender models.User, name string) {
 
 }
 
-func (Broker *Broker) leaveChannel(name string) {
+func (Broker *Broker) leaveChannel(sender models.User, name string) {
 
 }
 
-func (Broker *Broker) show(param string) {
+func (Broker *Broker) show(sender models.User, param string) {
+	var channels []string
+	var users []string
 
+	for _, channel := range Broker.channels {
+		channels = append(channels, channel.Name)
+	}
+
+	for _, user := range Broker.users {
+		users = append(users, user.NickName)
+	}
+
+	channelsMessage := models.OutcomingMessage{Channel: "Channels", Text: strings.Join(channels, " "), Time: time.Now()}
+	usersMessage := models.OutcomingMessage{Sender: "Users", Text: strings.Join(users, " "), Time: time.Now()}
+
+	connection := Broker.users[sender.NickName].Connection
+
+	switch param {
+	case "users":
+		Broker.sendMessage(connection, usersMessage)
+	case "channels":
+		Broker.sendMessage(connection, channelsMessage)
+	case "all":
+		Broker.sendMessage(connection, channelsMessage)
+		if len(users) > 0 {
+			Broker.sendMessage(connection, usersMessage)
+		}
+	}
 }
-
-//TODO: Create Channels(Rooms), Show all users and rooms of user at connecting to broker,

@@ -1,10 +1,8 @@
-package receiver
+package models
 
-import (
-	"time"
-)
+import "time"
 
-type Message struct {
+type OutcomingMessage struct {
 	Channel string    `json:"channel"`
 	Sender  string    `json:"user"`
 	Text    string    `json:"text"`
