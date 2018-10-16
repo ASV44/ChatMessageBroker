@@ -124,6 +124,11 @@ func (client *Client) showReceivedMessage(message receiver.Message) {
 		fmt.Printf("@%s ", message.Sender)
 	}
 	if message.Text != "" {
-		fmt.Printf(": %s\n", message.Text)
+		fmt.Printf(": %s", message.Text)
+	}
+	if !message.Time.IsZero() {
+		fmt.Printf("\t %v\n", message.Time)
+	} else {
+		fmt.Println()
 	}
 }

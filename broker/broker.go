@@ -99,7 +99,7 @@ func (Broker *Broker) register(connection net.Conn) {
 	Broker.show(user, "all")
 
 	go Broker.listen(connection)
-	fmt.Printf("Connected user %s Id: %d\n", newUser.NickName, newUser.Id)
+	fmt.Printf("Connected user: %s Id: %d addrr: %v\n", newUser.NickName, newUser.Id, connection.RemoteAddr())
 }
 
 func (Broker *Broker) sendMessage(connection net.Conn, message models.OutcomingMessage) {
@@ -121,14 +121,18 @@ func (Broker *Broker) handleDirectMessage(message models.IncomingMessage) {
 func (Broker *Broker) handleChannelMessage(message models.IncomingMessage) {
 	channel, isPresent := Broker.channels[message.Target]
 	if isPresent {
-		draft := message.ToOutcomingMessage()
-		for _, user := range channel.Subscribers {
-			if user.Id != message.Sender.Id {
-				go Broker.sendMessage(user.Connection, draft)
+		sender := Broker.users[message.Sender.NickName]
+		if channel.Contains(sender) {
+			draft := message.ToOutcomingMessage()
+			for _, user := range channel.Subscribers {
+				if user.Id != message.Sender.Id {
+					go Broker.sendMessage(user.Connection, draft)
+				}
 			}
+		} else {
+			Broker.sendMessage(sender.Connection, models.OutcomingMessage{Channel: channel.Name, Text: "not joined yet!"})
 		}
 	}
-	//TODO: not allow to write to channel without joining it
 }
 
 func (Broker *Broker) createChannel(sender models.User, name string) {
@@ -160,7 +164,18 @@ func (Broker *Broker) joinChannel(sender models.User, name string) {
 }
 
 func (Broker *Broker) leaveChannel(sender models.User, name string) {
-	//TODO: Implement leaving of channel
+	user := Broker.users[sender.NickName]
+	channel, exist := Broker.channels[name]
+	if exist {
+		if isPresent, index := channel.ContainsSubscriber(user); isPresent {
+			channel.Subscribers = append(channel.Subscribers[:index], channel.Subscribers[index+1:]...)
+			Broker.sendMessage(user.Connection, Broker.getChannelSubscribersMessage(channel))
+		} else {
+			Broker.sendMessage(user.Connection, models.OutcomingMessage{Channel: name, Text: "not subscribed to!"})
+		}
+	} else {
+		Broker.sendMessage(user.Connection, models.OutcomingMessage{Channel: name, Text: "does not exist!"})
+	}
 }
 
 func (Broker *Broker) getWorkspaceChannelsMessage() models.OutcomingMessage {
@@ -170,7 +185,7 @@ func (Broker *Broker) getWorkspaceChannelsMessage() models.OutcomingMessage {
 	}
 
 	return models.OutcomingMessage{Channel: "Channels",
-		Text: strings.Join(channels, " "),
+		Text: strings.Join(channels, " | "),
 		Time: time.Now()}
 }
 
@@ -180,7 +195,7 @@ func (Broker *Broker) getWorkspaceUsersMessage() models.OutcomingMessage {
 		users = append(users, user.NickName)
 	}
 	return models.OutcomingMessage{Sender: "Users",
-		Text: strings.Join(users, " "),
+		Text: strings.Join(users, " | "),
 		Time: time.Now()}
 
 }
@@ -192,7 +207,7 @@ func (Broker *Broker) getChannelSubscribersMessage(channel *broker.Channel) mode
 	}
 	return models.OutcomingMessage{Channel: channel.Name,
 		Sender: "Users",
-		Text:   strings.Join(users, " "),
+		Text:   strings.Join(users, " | "),
 		Time:   time.Now()}
 }
 
@@ -206,5 +221,10 @@ func (Broker *Broker) show(sender models.User, param string) {
 	case "all":
 		Broker.sendMessage(connection, Broker.getWorkspaceChannelsMessage())
 		Broker.sendMessage(connection, Broker.getWorkspaceUsersMessage())
+	default:
+		channel, exist := Broker.channels[param]
+		if exist {
+			Broker.sendMessage(connection, Broker.getChannelSubscribersMessage(channel))
+		}
 	}
 }

@@ -16,3 +16,12 @@ func (channel *Channel) Contains(user entity.User) bool {
 	}
 	return false
 }
+
+func (channel *Channel) ContainsSubscriber(user entity.User) (bool, int) {
+	for index, subscriber := range channel.Subscribers {
+		if subscriber == user && subscriber.Id == user.Id {
+			return true, index
+		}
+	}
+	return false, -1
+}
