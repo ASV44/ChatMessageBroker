@@ -2,8 +2,10 @@ package broker
 
 import (
 	"fmt"
+	"io"
 	"net"
 	"os"
+	"time"
 )
 
 const (
@@ -43,4 +45,19 @@ func (server *Server) acceptConnections() {
 		}
 		server.Connections <- connection
 	}
+}
+
+func (server *Server) IsConnectionActive(connection *net.Conn) bool {
+	(*connection).SetReadDeadline(time.Now())
+	var isConnected bool
+	var one []byte
+	if _, err := (*connection).Read(one); err == io.EOF {
+		isConnected = false
+	} else {
+		var zero time.Time
+		(*connection).SetReadDeadline(zero)
+		isConnected = true
+	}
+
+	return isConnected
 }

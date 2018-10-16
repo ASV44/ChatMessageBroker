@@ -9,7 +9,9 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 	"time"
 )
 
@@ -35,10 +37,13 @@ func main() {
 func (client *Client) Start(connectionType string, host string, port string) {
 	var err error
 	client.connection, err = net.Dial(connectionType, host+":"+port)
+	defer client.connection.Close()
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
+
+	go client.sigIntHandler()
 
 	client.decoder = json.NewDecoder(client.connection)
 	client.inputReader = bufio.NewReader(os.Stdin)
@@ -47,7 +52,14 @@ func (client *Client) Start(connectionType string, host string, port string) {
 
 	go client.listenConnection()
 	client.listenUserInput()
+}
 
+func (client *Client) sigIntHandler() {
+	ch := make(chan os.Signal)
+	signal.Notify(ch, syscall.SIGINT)
+	<-ch
+	client.connection.Close()
+	os.Exit(0)
 }
 
 func (client *Client) registerUser() {
