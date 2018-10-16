@@ -5,6 +5,7 @@ import (
 	"ChatMessageBroker/broker/entity"
 	"ChatMessageBroker/broker/models"
 	"encoding/json"
+	"fmt"
 	"net"
 	"time"
 )
@@ -12,6 +13,7 @@ import (
 type Broker struct {
 	server   *broker.Server
 	users    []entity.User
+	incoming chan models.IncomingMessage
 	channels map[int]*broker.Channel
 }
 
@@ -25,18 +27,29 @@ func (Broker *Broker) Start() {
 	Broker.server.Start()
 	defer Broker.server.Listener.Close()
 
+	Broker.incoming = make(chan models.IncomingMessage)
 	Broker.channels = make(map[int]*broker.Channel)
 	Broker.channels[0] = &broker.Channel{Id: 0, Name: "random"}
-	Broker.listen()
+	Broker.run()
 
 }
 
-func (Broker *Broker) listen() {
+func (Broker *Broker) listen(connection net.Conn) {
+	decoder := json.NewDecoder(connection)
+	var message models.IncomingMessage
+	for {
+		decoder.Decode(&message)
+		Broker.incoming <- message
+	}
+}
+
+func (Broker *Broker) run() {
 	for {
 		select {
 		case connection := <-Broker.server.Connections:
 			go Broker.register(connection)
-
+		case message := <-Broker.incoming:
+			go Broker.handleIncomingMessages(message)
 		}
 	}
 }
@@ -56,6 +69,13 @@ func (Broker *Broker) register(connection net.Conn) {
 
 	Broker.users = append(Broker.users, newUser)
 	Broker.channels[0].Subscribers = Broker.users
+
+	go Broker.listen(connection)
+	fmt.Printf("Connected user %s Id: %d\n", newUser.NickName, newUser.Id)
+}
+
+func (Broker *Broker) handleIncomingMessages(message models.IncomingMessage) {
+	fmt.Println(message.Type, message.Target, message.Sender, message.Text, message.Time)
 }
 
 //TODO: Create Channels(Rooms), Show all users and rooms of user at connecting to broker,

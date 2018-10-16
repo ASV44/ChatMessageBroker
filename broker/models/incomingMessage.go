@@ -3,12 +3,14 @@ package models
 import "time"
 
 const (
-	SYSTEM        = "system"
-	COMMUNICATION = "communication"
+	CMD     = "cmd"
+	DIRECT  = "direct"
+	CHANNEL = "channel"
 )
 
-type Message struct {
+type IncomingMessage struct {
 	Type   string    `json:"type"`
+	Target string    `json:"target"`
 	Sender User      `json:"user"`
 	Text   string    `json:"text"`
 	Time   time.Time `json:"time"`

@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -19,8 +20,10 @@ const (
 )
 
 type Client struct {
-	connection net.Conn
-	user       models.User
+	connection  net.Conn
+	user        models.User
+	inputReader *bufio.Reader
+	decoder     *json.Decoder
 }
 
 func main() {
@@ -37,35 +40,44 @@ func (client *Client) Start(connectionType string, host string, port string) {
 		os.Exit(1)
 	}
 
-	socketReader := bufio.NewReader(client.connection)
-	inputReader := bufio.NewReader(os.Stdin)
+	client.decoder = json.NewDecoder(client.connection)
+	client.inputReader = bufio.NewReader(os.Stdin)
 
-	client.registerUser(socketReader, inputReader)
+	client.registerUser()
 
-	go client.listen(socketReader, client.onMessageReceive)
-	client.listen(inputReader, client.sendMessage)
+	go client.listenConnection()
+	client.listenUserInput()
 
 }
 
-func (client *Client) registerUser(socketReader *bufio.Reader, inputReader *bufio.Reader) {
-	data, _ := socketReader.ReadBytes('\n')
+func (client *Client) registerUser() {
 	var registerMessage receiver.Register
-	json.Unmarshal(data, &registerMessage)
+	client.decoder.Decode(&registerMessage)
 	fmt.Println("Connected at: " + registerMessage.Time.Format("15:04:05 2006-01-02"))
 	fmt.Print(registerMessage.Text)
 
-	nickName, _ := inputReader.ReadString('\n')
-	user := models.User{Id: registerMessage.UserId, NickName: nickName}
-	userJson, _ := json.Marshal(user)
+	nickName := client.getUserInput()
+	client.user = models.User{Id: registerMessage.UserId, NickName: nickName}
+	userJson, _ := json.Marshal(client.user)
 	client.connection.Write(userJson)
 }
 
-func (client *Client) listen(reader *bufio.Reader, handler func(data []byte)) {
+func (client *Client) listenConnection() {
+	var message receiver.Message
 	for {
-		data, _ := reader.ReadBytes('\n')
-		fmt.Print("Receive from input: " + string(data))
-		handler(data)
+		client.decoder.Decode(&message)
 	}
+}
+
+func (client *Client) listenUserInput() {
+	for {
+		client.onUserAction(client.getUserInput())
+	}
+}
+
+func (client *Client) getUserInput() string {
+	data, _ := client.inputReader.ReadString('\n')
+	return strings.TrimSuffix(string(data), "\n")
 }
 
 func (client *Client) onMessageReceive(data []byte) {
@@ -74,8 +86,27 @@ func (client *Client) onMessageReceive(data []byte) {
 
 }
 
-func (client *Client) sendMessage(data []byte) {
-	message := sender.Message{Sender: client.user, Text: string(data), Time: time.Now()}
+func (client *Client) onUserAction(data string) {
+	userInput := strings.Split(data, " ")
+	operator := userInput[0][:1]
+	target := userInput[0][1:]
+	text := strings.Join(userInput[1:], " ")
+	var messageType string
+
+	switch operator {
+	case "/":
+		messageType = sender.CMD
+	case "@":
+		messageType = sender.DIRECT
+	case "#":
+		messageType = sender.CHANNEL
+	}
+
+	client.sendMessage(messageType, target, text)
+}
+
+func (client *Client) sendMessage(messageType string, target string, text string) {
+	message := sender.Message{Type: messageType, Target: target, Sender: client.user, Text: text, Time: time.Now()}
 	jsonData, _ := json.Marshal(message)
 	client.connection.Write(jsonData)
 }
