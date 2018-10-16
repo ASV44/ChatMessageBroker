@@ -118,10 +118,10 @@ func (client *Client) sendMessage(messageType string, target string, text string
 
 func (client *Client) showReceivedMessage(message receiver.Message) {
 	if message.Channel != "" {
-		fmt.Printf("#%s", message.Channel)
+		fmt.Printf("#%s ", message.Channel)
 	}
 	if message.Sender != "" {
-		fmt.Printf("@%s", message.Sender)
+		fmt.Printf("@%s ", message.Sender)
 	}
 	if message.Text != "" {
 		fmt.Printf(": %s\n", message.Text)

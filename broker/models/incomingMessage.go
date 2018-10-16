@@ -15,3 +15,12 @@ type IncomingMessage struct {
 	Text   string    `json:"text"`
 	Time   time.Time `json:"time"`
 }
+
+func (incoming IncomingMessage) ToOutcomingMessage() OutcomingMessage {
+	var channel string
+	if incoming.Type == CHANNEL {
+		channel = incoming.Target
+	}
+	return OutcomingMessage{Channel: channel, Sender: incoming.Sender.NickName,
+		Text: incoming.Text, Time: incoming.Time}
+}
