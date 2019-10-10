@@ -9,23 +9,23 @@ import (
 )
 
 const (
-	DEFAULT_HOST = "localhost"
-	DEFAULT_PORT = "8888"
-	DEFAULT_TYPE = "tcp"
+	DefaultHost = "localhost"
+	DefaultPort = "8888"
+	DefaultType = "tcp"
 )
 
 type Server struct {
 	Host           string
 	Port           string
 	ConnectionType string
-	Listener       net.Listener
 	Connections    chan net.Conn
+	listener       net.Listener
 }
 
-func (server *Server) Start() {
+func (server Server) Start() {
 	server.Connections = make(chan net.Conn)
 	var err error
-	server.Listener, err = net.Listen(server.ConnectionType, server.Host+":"+server.Port)
+	server.listener, err = net.Listen(server.ConnectionType, server.Host+":"+server.Port)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -36,9 +36,9 @@ func (server *Server) Start() {
 	go server.acceptConnections()
 }
 
-func (server *Server) acceptConnections() {
+func (server Server) acceptConnections() {
 	for {
-		connection, err := server.Listener.Accept()
+		connection, err := server.listener.Accept()
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
@@ -47,17 +47,32 @@ func (server *Server) acceptConnections() {
 	}
 }
 
-func (server *Server) IsConnectionActive(connection *net.Conn) bool {
-	(*connection).SetReadDeadline(time.Now())
+func (server Server) IsConnectionActive(connection net.Conn) bool {
+	err := connection.SetReadDeadline(time.Now())
+	if err != nil {
+		fmt.Println("Could not set read deadline ", err)
+	}
+
 	var isConnected bool
 	var one []byte
-	if _, err := (*connection).Read(one); err == io.EOF {
+	if _, err := connection.Read(one); err == io.EOF {
 		isConnected = false
 	} else {
 		var zero time.Time
-		(*connection).SetReadDeadline(zero)
+		err = connection.SetReadDeadline(zero)
+		if err != nil {
+			fmt.Println("Could not set read deadline to zero value ", err)
+		}
+
 		isConnected = true
 	}
 
 	return isConnected
+}
+
+func (server Server) Close() {
+	err := server.listener.Close()
+	if err != nil {
+		fmt.Println("Could not close server listener ", err)
+	}
 }
