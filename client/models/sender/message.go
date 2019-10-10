@@ -1,7 +1,7 @@
 package sender
 
 import (
-	"ChatMessageBroker/client/models"
+	"github.com/ASV44/ChatMessageBroker/client/models"
 	"time"
 )
 

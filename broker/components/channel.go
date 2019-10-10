@@ -1,6 +1,6 @@
 package broker
 
-import "ChatMessageBroker/broker/entity"
+import "github.com/ASV44/ChatMessageBroker/broker/entity"
 
 type Channel struct {
 	Id          int

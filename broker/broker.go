@@ -1,11 +1,11 @@
 package main
 
 import (
-	"./components"
-	"ChatMessageBroker/broker/entity"
-	"ChatMessageBroker/broker/models"
 	"encoding/json"
 	"fmt"
+	"github.com/ASV44/ChatMessageBroker/broker/components"
+	"github.com/ASV44/ChatMessageBroker/broker/entity"
+	"github.com/ASV44/ChatMessageBroker/broker/models"
 	"io"
 	"net"
 	"strings"
@@ -28,9 +28,9 @@ func main() {
 }
 
 func (Broker *Broker) Start() {
-	Broker.server = &broker.Server{Host: broker.DEFAULT_HOST, Port: broker.DEFAULT_PORT, ConnectionType: broker.DEFAULT_TYPE}
+	Broker.server = &broker.Server{Host: broker.DefaultHost, Port: broker.DefaultPort, ConnectionType: broker.DefaultType}
 	Broker.server.Start()
-	defer Broker.server.Listener.Close()
+	defer Broker.server.Close()
 
 	Broker.initMessageDispatcher()
 	Broker.initCommandDispatcher()
@@ -86,11 +86,17 @@ func (Broker *Broker) register(connection net.Conn) {
 	text := fmt.Sprintf("Welcome to %s workspace!\nEnter nickname:", Broker.workspace)
 	message := models.Register{UserId: len(Broker.users), Text: text, Time: time.Now()}
 	data, _ := json.Marshal(message)
-	connection.Write(data)
+	_, err := connection.Write(data)
+	if err != nil {
+		fmt.Println("Could not write data at register ", err)
+	}
 
 	decoder := json.NewDecoder(connection)
 	var user models.User
-	decoder.Decode(&user)
+	err = decoder.Decode(&user)
+	if err != nil {
+		fmt.Println("Could not decode register response ", err)
+	}
 	newUser := user.ToUserEntity(connection)
 
 	Broker.users[newUser.NickName] = newUser
@@ -104,7 +110,10 @@ func (Broker *Broker) register(connection net.Conn) {
 
 func (Broker *Broker) sendMessage(connection net.Conn, message models.OutcomingMessage) {
 	data, _ := json.Marshal(message)
-	connection.Write(data)
+	_, err := connection.Write(data)
+	if err != nil {
+		fmt.Println("Could not write message data ", err)
+	}
 }
 
 func (Broker *Broker) handleCommand(message models.IncomingMessage) {

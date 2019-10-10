@@ -1,12 +1,12 @@
 package main
 
 import (
-	"ChatMessageBroker/client/models"
-	"ChatMessageBroker/client/models/receiver"
-	"ChatMessageBroker/client/models/sender"
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"github.com/ASV44/ChatMessageBroker/client/models"
+	"github.com/ASV44/ChatMessageBroker/client/models/receiver"
+	"github.com/ASV44/ChatMessageBroker/client/models/sender"
 	"io"
 	"net"
 	"os"
@@ -15,9 +15,9 @@ import (
 )
 
 const (
-	DEFAULT_HOST = "localhost"
-	DEFAULT_PORT = "8888"
-	DEFAULT_TYPE = "tcp"
+	DefaultHost = "localhost"
+	DefaultPort = "8888"
+	DefaultType = "tcp"
 )
 
 type Client struct {
@@ -30,13 +30,13 @@ type Client struct {
 func main() {
 	client := Client{}
 
-	client.Start(DEFAULT_TYPE, DEFAULT_HOST, DEFAULT_PORT)
+	client.Start(DefaultType, DefaultHost, DefaultPort)
 }
 
-func (client *Client) Start(connectionType string, host string, port string) {
+func (client Client) Start(connectionType string, host string, port string) {
 	var err error
 	client.connection, err = net.Dial(connectionType, host+":"+port)
-	defer client.connection.Close()
+	defer client.Close()
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -51,19 +51,32 @@ func (client *Client) Start(connectionType string, host string, port string) {
 	client.listenUserInput()
 }
 
-func (client *Client) registerUser() {
+func (client Client) Close() {
+	err := client.connection.Close()
+	if err != nil {
+		fmt.Println("Could not close client connection ", err)
+	}
+}
+
+func (client Client) registerUser() {
 	var registerMessage receiver.Register
-	client.decoder.Decode(&registerMessage)
+	err := client.decoder.Decode(&registerMessage)
+	if err != nil {
+		fmt.Println("Could not decode register response ", err)
+	}
 	fmt.Println("Connected at: " + registerMessage.Time.Format("15:04:05 2006-01-02"))
 	fmt.Print(registerMessage.Text)
 
 	nickName := client.getUserInput()
 	client.user = models.User{Id: registerMessage.UserId, NickName: nickName}
 	userJson, _ := json.Marshal(client.user)
-	client.connection.Write(userJson)
+	_, err = client.connection.Write(userJson)
+	if err != nil {
+		fmt.Println("Could not write register data ", err)
+	}
 }
 
-func (client *Client) listenConnection() {
+func (client Client) listenConnection() {
 	var message receiver.Message
 	for {
 		if err := client.decoder.Decode(&message); err != io.EOF {
@@ -74,24 +87,18 @@ func (client *Client) listenConnection() {
 	}
 }
 
-func (client *Client) listenUserInput() {
+func (client Client) listenUserInput() {
 	for {
 		client.onUserAction(client.getUserInput())
 	}
 }
 
-func (client *Client) getUserInput() string {
+func (client Client) getUserInput() string {
 	data, _ := client.inputReader.ReadString('\n')
 	return strings.TrimSuffix(string(data), "\n")
 }
 
-func (client *Client) onMessageReceive(data []byte) {
-	var message receiver.Message
-	json.Unmarshal(data, &message)
-
-}
-
-func (client *Client) onUserAction(data string) {
+func (client Client) onUserAction(data string) {
 	userInput := strings.Split(data, " ")
 	operator := userInput[0][:1]
 	target := userInput[0][1:]
@@ -110,13 +117,16 @@ func (client *Client) onUserAction(data string) {
 	client.sendMessage(messageType, target, text)
 }
 
-func (client *Client) sendMessage(messageType string, target string, text string) {
+func (client Client) sendMessage(messageType string, target string, text string) {
 	message := sender.Message{Type: messageType, Target: target, Sender: client.user, Text: text, Time: time.Now()}
 	jsonData, _ := json.Marshal(message)
-	client.connection.Write(jsonData)
+	_, err := client.connection.Write(jsonData)
+	if err != nil {
+		fmt.Println("Could not write client message ", err)
+	}
 }
 
-func (client *Client) showReceivedMessage(message receiver.Message) {
+func (client Client) showReceivedMessage(message receiver.Message) {
 	if message.Channel != "" {
 		fmt.Printf("#%s ", message.Channel)
 	}

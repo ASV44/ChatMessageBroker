@@ -1,7 +1,7 @@
 package models
 
 import (
-	"ChatMessageBroker/broker/entity"
+	"github.com/ASV44/ChatMessageBroker/broker/entity"
 	"net"
 )
 
