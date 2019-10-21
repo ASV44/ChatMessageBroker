@@ -3,15 +3,17 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/ASV44/ChatMessageBroker/broker/components"
-	"github.com/ASV44/ChatMessageBroker/broker/entity"
-	"github.com/ASV44/ChatMessageBroker/broker/models"
 	"io"
 	"net"
 	"strings"
 	"time"
+
+	broker "github.com/ASV44/ChatMessageBroker/broker/components"
+	"github.com/ASV44/ChatMessageBroker/broker/entity"
+	"github.com/ASV44/ChatMessageBroker/broker/models"
 )
 
+// Broker represents main structure which contains all related fields for routing message
 type Broker struct {
 	workspace         string
 	server            *broker.Server
@@ -27,6 +29,7 @@ func main() {
 	Broker.Start()
 }
 
+// Start init broker server, creates channels and start receiving and routing of connections
 func (Broker *Broker) Start() {
 	Broker.server = &broker.Server{Host: broker.DefaultHost, Port: broker.DefaultPort, ConnectionType: broker.DefaultType}
 	Broker.server.Start()

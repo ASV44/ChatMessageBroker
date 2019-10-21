@@ -1,15 +1,18 @@
 package models
 
 import (
-	"github.com/ASV44/ChatMessageBroker/broker/entity"
 	"net"
+
+	"github.com/ASV44/ChatMessageBroker/broker/entity"
 )
 
+// User represents model with user data received from client in JSON format
 type User struct {
-	Id       int    `json:"id"`
+	ID       int    `json:"id"`
 	NickName string `json:"nickName"`
 }
 
+// ToUserEntity map user model to user entity
 func (user User) ToUserEntity(connection net.Conn) entity.User {
-	return entity.User{Id: user.Id, NickName: user.NickName, Connection: connection}
+	return entity.User{ID: user.ID, NickName: user.NickName, Connection: connection}
 }

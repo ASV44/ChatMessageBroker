@@ -4,22 +4,25 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
-	"github.com/ASV44/ChatMessageBroker/client/models"
-	"github.com/ASV44/ChatMessageBroker/client/models/receiver"
-	"github.com/ASV44/ChatMessageBroker/client/models/sender"
 	"io"
 	"net"
 	"os"
 	"strings"
 	"time"
+
+	"github.com/ASV44/ChatMessageBroker/client/models"
+	"github.com/ASV44/ChatMessageBroker/client/models/receiver"
+	"github.com/ASV44/ChatMessageBroker/client/models/sender"
 )
 
+// Constant value of client config
 const (
 	DefaultHost = "localhost"
 	DefaultPort = "8888"
 	DefaultType = "tcp"
 )
 
+// Client represents instance of client connection to broker
 type Client struct {
 	connection  net.Conn
 	user        models.User
@@ -33,6 +36,7 @@ func main() {
 	client.Start(DefaultType, DefaultHost, DefaultPort)
 }
 
+// Start init connection to broker and register new user on broker server
 func (client Client) Start(connectionType string, host string, port string) {
 	var err error
 	client.connection, err = net.Dial(connectionType, host+":"+port)
@@ -51,6 +55,7 @@ func (client Client) Start(connectionType string, host string, port string) {
 	client.listenUserInput()
 }
 
+// Close end connection to broker
 func (client Client) Close() {
 	err := client.connection.Close()
 	if err != nil {
@@ -69,8 +74,8 @@ func (client Client) registerUser() {
 
 	nickName := client.getUserInput()
 	client.user = models.User{Id: registerMessage.UserId, NickName: nickName}
-	userJson, _ := json.Marshal(client.user)
-	_, err = client.connection.Write(userJson)
+	userJSON, _ := json.Marshal(client.user)
+	_, err = client.connection.Write(userJSON)
 	if err != nil {
 		fmt.Println("Could not write register data ", err)
 	}
