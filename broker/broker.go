@@ -108,7 +108,7 @@ func (Broker *Broker) register(connection net.Conn) {
 	Broker.show(user, "all")
 
 	go Broker.listen(connection)
-	fmt.Printf("Connected user: %s Id: %d addrr: %v\n", newUser.NickName, newUser.Id, connection.RemoteAddr())
+	fmt.Printf("Connected user: %s Id: %d addrr: %v\n", newUser.NickName, newUser.ID, connection.RemoteAddr())
 }
 
 func (Broker *Broker) sendMessage(connection net.Conn, message models.OutcomingMessage) {
