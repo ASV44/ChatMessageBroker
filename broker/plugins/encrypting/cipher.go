@@ -3,13 +3,18 @@ package main
 import "errors"
 import "math/rand"
 
+type caesarCipher struct {
+	encryptedText *string
+	key           []rune
+}
+
 //EncryptCaesar replace every letter in the `text` by a letter shifted by `shift`.
-func EncryptCaesar(shift int, text string) string {
+func (c *caesarCipher) EncryptCaesar(shift int, text string) string {
 	return caesarShift(shift, text)
 }
 
 //DecryptCaesar replace every letter in the `text` by a letter shifted by `-shift`.
-func DecryptCaesar(shift int, text string) string {
+func (c *caesarCipher) DecryptCaesar(shift int, text string) string {
 	return caesarShift(-shift, text)
 }
 
@@ -18,6 +23,8 @@ type vermanCipher struct {
 	encryptedText *string
 	key           []rune
 }
+
+var CaesarCipher caesarCipher
 
 //VermanCipher is a exported variable that will be shared with external app
 var VermanCipher vermanCipher
