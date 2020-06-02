@@ -39,7 +39,9 @@ func main() {
 // Start init connection to broker and register new user on broker server
 func (client Client) Start(connectionType string, host string, port string) {
 	var err error
+	fmt.Println("dialing")
 	client.connection, err = net.Dial(connectionType, host+":"+port)
+	fmt.Println("connecting")
 	defer client.Close()
 	if err != nil {
 		fmt.Println(err)
@@ -73,7 +75,7 @@ func (client Client) registerUser() {
 	fmt.Print(registerMessage.Text)
 
 	nickName := client.getUserInput()
-	client.user = models.User{Id: registerMessage.UserId, NickName: nickName}
+	client.user = models.User{ID: registerMessage.UserId, NickName: nickName}
 	userJSON, _ := json.Marshal(client.user)
 	_, err = client.connection.Write(userJSON)
 	if err != nil {

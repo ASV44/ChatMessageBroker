@@ -6,12 +6,12 @@ import (
 )
 
 type PluginManager struct {
-
+	EncryptionPluginPath string
 }
 
-func (manager PluginManager) loadCipherPlugin() (EncryptionPluginEngine, error) {
+func (manager PluginManager) LoadCipherPlugin() (EncryptionPluginEngine, error) {
 	// Load Cipher plugin
-	pluginModule, err := plugin.Open("./encrypting/cipher.so")
+	pluginModule, err := plugin.Open(manager.EncryptionPluginPath)
 	if err != nil {
 		return EncryptionPluginEngine{}, models.PluginError{
 			Message: "Unable to load cipher module",

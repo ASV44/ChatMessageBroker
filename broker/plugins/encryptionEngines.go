@@ -8,4 +8,5 @@ type VermanEncryptionEngine interface {
 
 type CaesarEncryptionEngine interface {
 	EncryptCaesar(shift int, text string) string
+	DecryptCaesar(shift int, text string) string
 }

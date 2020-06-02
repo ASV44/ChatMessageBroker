@@ -10,7 +10,7 @@ type Channel struct {
 
 func (channel *Channel) Contains(user entity.User) bool {
 	for _, subscriber := range channel.Subscribers {
-		if subscriber == user && subscriber.Id == user.Id {
+		if subscriber == user && subscriber.ID == user.ID {
 			return true
 		}
 	}
@@ -19,7 +19,7 @@ func (channel *Channel) Contains(user entity.User) bool {
 
 func (channel *Channel) ContainsSubscriber(user entity.User) (bool, int) {
 	for index, subscriber := range channel.Subscribers {
-		if subscriber == user && subscriber.Id == user.Id {
+		if subscriber == user && subscriber.ID == user.ID {
 			return true, index
 		}
 	}

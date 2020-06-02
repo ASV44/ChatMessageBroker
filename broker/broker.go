@@ -3,8 +3,10 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/ASV44/ChatMessageBroker/broker/plugins"
 	"io"
 	"net"
+	"os"
 	"strings"
 	"time"
 
@@ -22,10 +24,17 @@ type Broker struct {
 	channels          map[string]*broker.Channel
 	messageDispatcher map[string]func(models.IncomingMessage)
 	commandDispatcher map[string]func(models.User, string)
+	encryptionEngine  plugins.EncryptionPluginEngine
 }
 
 func main() {
-	Broker := Broker{workspace: "Matrix"}
+	pluginManager := plugins.PluginManager{EncryptionPluginPath: "./plugin/cipher.so"}
+	encryptionPlugin, err := pluginManager.LoadCipherPlugin()
+	if err != nil {
+		fmt.Println("Could not load plugin ", err)
+		os.Exit(1)
+	}
+	Broker := Broker{workspace: "Matrix", encryptionEngine: encryptionPlugin}
 	Broker.Start()
 }
 
@@ -80,6 +89,7 @@ func (Broker *Broker) run() {
 		case connection := <-Broker.server.Connections:
 			go Broker.register(connection)
 		case message := <-Broker.incoming:
+			message.Text = Broker.encryptionEngine.Caeser.DecryptCaesar(5, message.Text)
 			go Broker.messageDispatcher[message.Type](message)
 		}
 	}
@@ -112,6 +122,7 @@ func (Broker *Broker) register(connection net.Conn) {
 }
 
 func (Broker *Broker) sendMessage(connection net.Conn, message models.OutcomingMessage) {
+	message.Text = Broker.encryptionEngine.Caeser.EncryptCaesar(5, message.Text)
 	data, _ := json.Marshal(message)
 	_, err := connection.Write(data)
 	if err != nil {
@@ -137,7 +148,7 @@ func (Broker *Broker) handleChannelMessage(message models.IncomingMessage) {
 		if channel.Contains(sender) {
 			draft := message.ToOutcomingMessage()
 			for _, user := range channel.Subscribers {
-				if user.Id != message.Sender.Id {
+				if user.ID != message.Sender.ID {
 					go Broker.sendMessage(user.Connection, draft)
 				}
 			}
