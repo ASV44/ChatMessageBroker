@@ -25,7 +25,7 @@ type Server struct {
 }
 
 // Start init and start tcp server and start accepting connections
-func (server Server) Start() {
+func (server *Server) Start() {
 	server.Connections = make(chan net.Conn)
 	var err error
 	server.listener, err = net.Listen(server.ConnectionType, server.Host+":"+server.Port)
@@ -39,7 +39,7 @@ func (server Server) Start() {
 	go server.acceptConnections()
 }
 
-func (server Server) acceptConnections() {
+func (server *Server) acceptConnections() {
 	for {
 		connection, err := server.listener.Accept()
 		if err != nil {
@@ -51,7 +51,7 @@ func (server Server) acceptConnections() {
 }
 
 // IsConnectionActive checks if provided connection is still active
-func (server Server) IsConnectionActive(connection net.Conn) bool {
+func (server *Server) IsConnectionActive(connection net.Conn) bool {
 	err := connection.SetReadDeadline(time.Now())
 	if err != nil {
 		fmt.Println("Could not set read deadline ", err)
@@ -75,7 +75,7 @@ func (server Server) IsConnectionActive(connection net.Conn) bool {
 }
 
 // Close end server listening of new connection
-func (server Server) Close() {
+func (server *Server) Close() {
 	err := server.listener.Close()
 	if err != nil {
 		fmt.Println("Could not close server listener ", err)

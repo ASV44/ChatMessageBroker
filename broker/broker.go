@@ -42,7 +42,6 @@ func (Broker *Broker) Start() {
 	Broker.channels = make(map[string]*broker.Channel)
 	Broker.channels["random"] = &broker.Channel{Id: 0, Name: "random"}
 	Broker.run()
-
 }
 
 func (Broker *Broker) initMessageDispatcher() {
@@ -108,7 +107,7 @@ func (Broker *Broker) register(connection net.Conn) {
 	Broker.show(user, "all")
 
 	go Broker.listen(connection)
-	fmt.Printf("Connected user: %s Id: %d addrr: %v\n", newUser.NickName, newUser.Id, connection.RemoteAddr())
+	fmt.Printf("Connected user: %s Id: %d addrr: %v\n", newUser.NickName, newUser.ID, connection.RemoteAddr())
 }
 
 func (Broker *Broker) sendMessage(connection net.Conn, message models.OutcomingMessage) {
@@ -137,7 +136,7 @@ func (Broker *Broker) handleChannelMessage(message models.IncomingMessage) {
 		if channel.Contains(sender) {
 			draft := message.ToOutcomingMessage()
 			for _, user := range channel.Subscribers {
-				if user.Id != message.Sender.Id {
+				if user.ID != message.Sender.ID {
 					go Broker.sendMessage(user.Connection, draft)
 				}
 			}
@@ -233,9 +232,8 @@ func (Broker *Broker) show(sender models.User, param string) {
 	case "all":
 		Broker.sendMessage(connection, Broker.getWorkspaceChannelsMessage())
 		Broker.sendMessage(connection, Broker.getWorkspaceUsersMessage())
-	default:
-		channel, exist := Broker.channels[param]
-		if exist {
+	default: // Get all users of specific channel if it exist
+		if channel, exist := Broker.channels[param]; exist {
 			Broker.sendMessage(connection, Broker.getChannelSubscribersMessage(channel))
 		}
 	}

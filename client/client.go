@@ -37,7 +37,7 @@ func main() {
 }
 
 // Start init connection to broker and register new user on broker server
-func (client Client) Start(connectionType string, host string, port string) {
+func (client *Client) Start(connectionType string, host string, port string) {
 	var err error
 	client.connection, err = net.Dial(connectionType, host+":"+port)
 	defer client.Close()
@@ -56,14 +56,14 @@ func (client Client) Start(connectionType string, host string, port string) {
 }
 
 // Close end connection to broker
-func (client Client) Close() {
+func (client *Client) Close() {
 	err := client.connection.Close()
 	if err != nil {
 		fmt.Println("Could not close client connection ", err)
 	}
 }
 
-func (client Client) registerUser() {
+func (client *Client) registerUser() {
 	var registerMessage receiver.Register
 	err := client.decoder.Decode(&registerMessage)
 	if err != nil {
@@ -73,7 +73,7 @@ func (client Client) registerUser() {
 	fmt.Print(registerMessage.Text)
 
 	nickName := client.getUserInput()
-	client.user = models.User{Id: registerMessage.UserId, NickName: nickName}
+	client.user = models.User{ID: registerMessage.UserId, NickName: nickName}
 	userJSON, _ := json.Marshal(client.user)
 	_, err = client.connection.Write(userJSON)
 	if err != nil {
@@ -81,7 +81,7 @@ func (client Client) registerUser() {
 	}
 }
 
-func (client Client) listenConnection() {
+func (client *Client) listenConnection() {
 	var message receiver.Message
 	for {
 		if err := client.decoder.Decode(&message); err != io.EOF {
@@ -92,18 +92,18 @@ func (client Client) listenConnection() {
 	}
 }
 
-func (client Client) listenUserInput() {
+func (client *Client) listenUserInput() {
 	for {
 		client.onUserAction(client.getUserInput())
 	}
 }
 
-func (client Client) getUserInput() string {
+func (client *Client) getUserInput() string {
 	data, _ := client.inputReader.ReadString('\n')
 	return strings.TrimSuffix(string(data), "\n")
 }
 
-func (client Client) onUserAction(data string) {
+func (client *Client) onUserAction(data string) {
 	userInput := strings.Split(data, " ")
 	operator := userInput[0][:1]
 	target := userInput[0][1:]
@@ -122,7 +122,7 @@ func (client Client) onUserAction(data string) {
 	client.sendMessage(messageType, target, text)
 }
 
-func (client Client) sendMessage(messageType string, target string, text string) {
+func (client *Client) sendMessage(messageType string, target string, text string) {
 	message := sender.Message{Type: messageType, Target: target, Sender: client.user, Text: text, Time: time.Now()}
 	jsonData, _ := json.Marshal(message)
 	_, err := client.connection.Write(jsonData)
@@ -131,7 +131,7 @@ func (client Client) sendMessage(messageType string, target string, text string)
 	}
 }
 
-func (client Client) showReceivedMessage(message receiver.Message) {
+func (client *Client) showReceivedMessage(message receiver.Message) {
 	if message.Channel != "" {
 		fmt.Printf("#%s ", message.Channel)
 	}
