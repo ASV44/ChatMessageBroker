@@ -1,4 +1,4 @@
-package main
+package broker
 
 import (
 	"encoding/json"
@@ -8,85 +8,93 @@ import (
 	"strings"
 	"time"
 
-	broker "github.com/ASV44/ChatMessageBroker/broker/components"
+	"github.com/ASV44/ChatMessageBroker/broker/components"
 	"github.com/ASV44/ChatMessageBroker/broker/entity"
 	"github.com/ASV44/ChatMessageBroker/broker/models"
 )
 
 // Broker represents main structure which contains all related fields for routing message
 type Broker struct {
-	workspace         string
-	server            *broker.Server
-	incoming          chan models.IncomingMessage
-	users             map[string]entity.User
-	channels          map[string]*broker.Channel
-	messageDispatcher map[string]func(models.IncomingMessage)
-	commandDispatcher map[string]func(models.User, string)
+	workspace string
+	server    *broker.Server
+	incoming  chan models.IncomingMessage
+	users     map[string]entity.User
+	channels  map[string]*entity.Channel
 }
 
-func main() {
-	Broker := Broker{workspace: "Matrix"}
-	Broker.Start()
+func Init() Broker {
+	brokerInstance := Broker{workspace: "Matrix"}
+	brokerInstance.server = &broker.Server{
+		Host:           broker.DefaultHost,
+		Port:           broker.DefaultPort,
+		ConnectionType: broker.DefaultType,
+	}
+	brokerInstance.incoming = make(chan models.IncomingMessage)
+	brokerInstance.users = make(map[string]entity.User)
+	brokerInstance.channels = make(map[string]*entity.Channel)
+	brokerInstance.channels["random"] = &entity.Channel{Id: 0, Name: "random"}
+
+	return brokerInstance
 }
 
 // Start init broker server, creates channels and start receiving and routing of connections
-func (Broker *Broker) Start() {
-	Broker.server = &broker.Server{Host: broker.DefaultHost, Port: broker.DefaultPort, ConnectionType: broker.DefaultType}
-	Broker.server.Start()
-	defer Broker.server.Close()
+func (broker Broker) Start() {
+	broker.server.Start()
+	defer broker.server.Close()
 
-	Broker.initMessageDispatcher()
-	Broker.initCommandDispatcher()
-	Broker.incoming = make(chan models.IncomingMessage)
-	Broker.users = make(map[string]entity.User)
-	Broker.channels = make(map[string]*broker.Channel)
-	Broker.channels["random"] = &broker.Channel{Id: 0, Name: "random"}
-	Broker.run()
+	broker.run()
 }
 
-func (Broker *Broker) initMessageDispatcher() {
-	Broker.messageDispatcher = make(map[string]func(models.IncomingMessage))
-
-	Broker.messageDispatcher[models.CMD] = Broker.handleCommand
-	Broker.messageDispatcher[models.DIRECT] = Broker.handleDirectMessage
-	Broker.messageDispatcher[models.CHANNEL] = Broker.handleChannelMessage
-}
-
-func (Broker *Broker) initCommandDispatcher() {
-	Broker.commandDispatcher = make(map[string]func(models.User, string))
-
-	Broker.commandDispatcher["create"] = Broker.createChannel
-	Broker.commandDispatcher["join"] = Broker.joinChannel
-	Broker.commandDispatcher["leave"] = Broker.leaveChannel
-	Broker.commandDispatcher["show"] = Broker.show
-}
-
-func (Broker *Broker) listen(connection net.Conn) {
+func (broker Broker) listen(connection net.Conn) {
 	decoder := json.NewDecoder(connection)
 	var message models.IncomingMessage
 	for {
 		if err := decoder.Decode(&message); err != io.EOF {
-			Broker.incoming <- message
+			broker.incoming <- message
 		} else {
 			return
 		}
 	}
 }
 
-func (Broker *Broker) run() {
+func (broker Broker) run() {
 	for {
 		select {
-		case connection := <-Broker.server.Connections:
-			go Broker.register(connection)
-		case message := <-Broker.incoming:
-			go Broker.messageDispatcher[message.Type](message)
+		case connection := <-broker.server.Connections:
+			go broker.register(connection)
+		case message := <-broker.incoming:
+			go broker.dispatchMessage(message)
 		}
 	}
 }
 
-func (Broker *Broker) register(connection net.Conn) {
-	text := fmt.Sprintf("Welcome to %s workspace!\nEnter nickname:", Broker.workspace)
-	message := models.Register{UserId: len(Broker.users), Text: text, Time: time.Now()}
+func (broker Broker) dispatchMessage(message models.IncomingMessage) {
+	switch message.Type {
+	case models.CMD:
+		broker.dispatchCommand(message)
+	case models.DIRECT:
+		broker.handleDirectMessage(message)
+	case models.CHANNEL:
+		broker.handleChannelMessage(message)
+	}
+}
+
+func (broker Broker) dispatchCommand(message models.IncomingMessage) {
+	switch message.Target {
+	case "create":
+		broker.createChannel(message.Sender, message.Text)
+	case "join":
+		broker.joinChannel(message.Sender, message.Text)
+	case "leave":
+		broker.leaveChannel(message.Sender, message.Text)
+	case "show":
+		broker.show(message.Sender, message.Text)
+	}
+}
+
+func (broker Broker) register(connection net.Conn) {
+	text := fmt.Sprintf("Welcome to %s workspace!\nEnter nickname:", broker.workspace)
+	message := models.Register{UserId: len(broker.users), Text: text, Time: time.Now()}
 	data, _ := json.Marshal(message)
 	_, err := connection.Write(data)
 	if err != nil {
@@ -101,16 +109,16 @@ func (Broker *Broker) register(connection net.Conn) {
 	}
 	newUser := user.ToUserEntity(connection)
 
-	Broker.users[newUser.NickName] = newUser
-	subscribers := Broker.channels["random"].Subscribers
-	Broker.channels["random"].Subscribers = append(subscribers, newUser)
-	Broker.show(user, "all")
+	broker.users[newUser.NickName] = newUser
+	subscribers := broker.channels["random"].Subscribers
+	broker.channels["random"].Subscribers = append(subscribers, newUser)
+	broker.show(user, "all")
 
-	go Broker.listen(connection)
+	go broker.listen(connection)
 	fmt.Printf("Connected user: %s Id: %d addrr: %v\n", newUser.NickName, newUser.ID, connection.RemoteAddr())
 }
 
-func (Broker *Broker) sendMessage(connection net.Conn, message models.OutcomingMessage) {
+func (broker Broker) sendMessage(connection net.Conn, message models.OutcomingMessage) {
 	data, _ := json.Marshal(message)
 	_, err := connection.Write(data)
 	if err != nil {
@@ -118,80 +126,76 @@ func (Broker *Broker) sendMessage(connection net.Conn, message models.OutcomingM
 	}
 }
 
-func (Broker *Broker) handleCommand(message models.IncomingMessage) {
-	Broker.commandDispatcher[message.Target](message.Sender, message.Text)
-}
-
-func (Broker *Broker) handleDirectMessage(message models.IncomingMessage) {
-	user, isPresent := Broker.users[message.Target]
+func (broker Broker) handleDirectMessage(message models.IncomingMessage) {
+	user, isPresent := broker.users[message.Target]
 	if isPresent {
-		Broker.sendMessage(user.Connection, message.ToOutcomingMessage())
+		broker.sendMessage(user.Connection, message.ToOutcomingMessage())
 	}
 }
 
-func (Broker *Broker) handleChannelMessage(message models.IncomingMessage) {
-	channel, isPresent := Broker.channels[message.Target]
+func (broker Broker) handleChannelMessage(message models.IncomingMessage) {
+	channel, isPresent := broker.channels[message.Target]
 	if isPresent {
-		sender := Broker.users[message.Sender.NickName]
+		sender := broker.users[message.Sender.NickName]
 		if channel.Contains(sender) {
 			draft := message.ToOutcomingMessage()
 			for _, user := range channel.Subscribers {
 				if user.ID != message.Sender.ID {
-					go Broker.sendMessage(user.Connection, draft)
+					go broker.sendMessage(user.Connection, draft)
 				}
 			}
 		} else {
-			Broker.sendMessage(sender.Connection, models.OutcomingMessage{Channel: channel.Name, Text: "not joined yet!"})
+			broker.sendMessage(sender.Connection, models.OutcomingMessage{Channel: channel.Name, Text: "not joined yet!"})
 		}
 	}
 }
 
-func (Broker *Broker) createChannel(sender models.User, name string) {
-	user := Broker.users[sender.NickName]
-	_, exist := Broker.channels[name]
+func (broker Broker) createChannel(sender models.User, name string) {
+	user := broker.users[sender.NickName]
+	_, exist := broker.channels[name]
 	if !exist {
-		channel := &broker.Channel{Id: len(Broker.channels), Name: name}
-		Broker.channels[name] = channel
+		channel := &entity.Channel{Id: len(broker.channels), Name: name}
+		broker.channels[name] = channel
 		channel.Subscribers = append(channel.Subscribers, user)
-		Broker.sendMessage(user.Connection, Broker.getWorkspaceChannelsMessage())
+		broker.sendMessage(user.Connection, broker.getWorkspaceChannelsMessage())
 	} else {
-		Broker.sendMessage(user.Connection, models.OutcomingMessage{Channel: name, Text: "already exist!"})
+		broker.sendMessage(user.Connection, models.OutcomingMessage{Channel: name, Text: "already exist!"})
 	}
 }
 
-func (Broker *Broker) joinChannel(sender models.User, name string) {
-	user := Broker.users[sender.NickName]
-	channel, exist := Broker.channels[name]
+func (broker Broker) joinChannel(sender models.User, name string) {
+	user := broker.users[sender.NickName]
+	channel, exist := broker.channels[name]
 	if exist {
 		if !channel.Contains(user) {
 			channel.Subscribers = append(channel.Subscribers, user)
-			Broker.sendMessage(user.Connection, Broker.getChannelSubscribersMessage(channel))
+			broker.sendMessage(user.Connection, broker.getChannelSubscribersMessage(channel))
 		} else {
-			Broker.sendMessage(user.Connection, models.OutcomingMessage{Channel: name, Text: "already joined!"})
+			broker.sendMessage(user.Connection, models.OutcomingMessage{Channel: name, Text: "already joined!"})
 		}
 	} else {
-		Broker.sendMessage(user.Connection, models.OutcomingMessage{Channel: name, Text: "does not exist!"})
+		broker.sendMessage(user.Connection, models.OutcomingMessage{Channel: name, Text: "does not exist!"})
 	}
 }
 
-func (Broker *Broker) leaveChannel(sender models.User, name string) {
-	user := Broker.users[sender.NickName]
-	channel, exist := Broker.channels[name]
+func (broker Broker) leaveChannel(sender models.User, name string) {
+	user := broker.users[sender.NickName]
+	channel, exist := broker.channels[name]
 	if exist {
 		if isPresent, index := channel.ContainsSubscriber(user); isPresent {
 			channel.Subscribers = append(channel.Subscribers[:index], channel.Subscribers[index+1:]...)
-			Broker.sendMessage(user.Connection, Broker.getChannelSubscribersMessage(channel))
+			broker.sendMessage(user.Connection, broker.getChannelSubscribersMessage(channel))
 		} else {
-			Broker.sendMessage(user.Connection, models.OutcomingMessage{Channel: name, Text: "not subscribed to!"})
+			broker.sendMessage(user.Connection, models.OutcomingMessage{Channel: name, Text: "not subscribed to!"})
 		}
 	} else {
-		Broker.sendMessage(user.Connection, models.OutcomingMessage{Channel: name, Text: "does not exist!"})
+		broker.sendMessage(user.Connection, models.OutcomingMessage{Channel: name, Text: "does not exist!"})
 	}
 }
 
-func (Broker *Broker) getWorkspaceChannelsMessage() models.OutcomingMessage {
+func (broker Broker) getWorkspaceChannelsMessage() models.OutcomingMessage {
 	var channels []string
-	for _, channel := range Broker.channels {
+	for _, channel := range broker.channels {
 		channels = append(channels, channel.Name)
 	}
 
@@ -200,9 +204,9 @@ func (Broker *Broker) getWorkspaceChannelsMessage() models.OutcomingMessage {
 		Time: time.Now()}
 }
 
-func (Broker *Broker) getWorkspaceUsersMessage() models.OutcomingMessage {
+func (broker Broker) getWorkspaceUsersMessage() models.OutcomingMessage {
 	var users []string
-	for _, user := range Broker.users {
+	for _, user := range broker.users {
 		users = append(users, user.NickName)
 	}
 	return models.OutcomingMessage{Sender: "Users",
@@ -211,7 +215,7 @@ func (Broker *Broker) getWorkspaceUsersMessage() models.OutcomingMessage {
 
 }
 
-func (Broker *Broker) getChannelSubscribersMessage(channel *broker.Channel) models.OutcomingMessage {
+func (broker Broker) getChannelSubscribersMessage(channel *entity.Channel) models.OutcomingMessage {
 	var users []string
 	for _, user := range channel.Subscribers {
 		users = append(users, user.NickName)
@@ -222,19 +226,19 @@ func (Broker *Broker) getChannelSubscribersMessage(channel *broker.Channel) mode
 		Time:   time.Now()}
 }
 
-func (Broker *Broker) show(sender models.User, param string) {
-	connection := Broker.users[sender.NickName].Connection
+func (broker Broker) show(sender models.User, param string) {
+	connection := broker.users[sender.NickName].Connection
 	switch param {
 	case "users":
-		Broker.sendMessage(connection, Broker.getWorkspaceUsersMessage())
+		broker.sendMessage(connection, broker.getWorkspaceUsersMessage())
 	case "channels":
-		Broker.sendMessage(connection, Broker.getWorkspaceChannelsMessage())
+		broker.sendMessage(connection, broker.getWorkspaceChannelsMessage())
 	case "all":
-		Broker.sendMessage(connection, Broker.getWorkspaceChannelsMessage())
-		Broker.sendMessage(connection, Broker.getWorkspaceUsersMessage())
+		broker.sendMessage(connection, broker.getWorkspaceChannelsMessage())
+		broker.sendMessage(connection, broker.getWorkspaceUsersMessage())
 	default: // Get all users of specific channel if it exist
-		if channel, exist := Broker.channels[param]; exist {
-			Broker.sendMessage(connection, Broker.getChannelSubscribersMessage(channel))
+		if channel, exist := broker.channels[param]; exist {
+			broker.sendMessage(connection, broker.getChannelSubscribersMessage(channel))
 		}
 	}
 }

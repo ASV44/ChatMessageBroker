@@ -9,7 +9,7 @@ CLIENT_BINARY_NAME=client_app
 
 all: build
 build:
-				$(GOBUILD) -v -o $(BROKER_BINARY_NAME) broker/broker.go
+				$(GOBUILD) -v -o $(BROKER_BINARY_NAME) broker/cmd/main.go
 				$(GOBUILD) -v -o $(CLIENT_BINARY_NAME) client/client.go
 test:
 				$(GOTEST) -v ./...
