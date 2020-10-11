@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"net"
-	"os"
 	"time"
 )
 
@@ -21,37 +20,52 @@ type Server struct {
 	Port           string
 	ConnectionType string
 	Connections    chan net.Conn
-	listener       net.Listener
+}
+
+// InitServer creates and initialize instance of Server
+func InitServer(host string, port string, connectionType string) Server {
+	server := Server{
+		Host:           host,
+		Port:           port,
+		ConnectionType: connectionType,
+		Connections:    make(chan net.Conn),
+	}
+
+	return server
 }
 
 // Start init and start tcp server and start accepting connections
-func (server *Server) Start() {
-	server.Connections = make(chan net.Conn)
-	var err error
-	server.listener, err = net.Listen(server.ConnectionType, server.Host+":"+server.Port)
+func (server Server) Start() error {
+	listener, err := net.Listen(server.ConnectionType, server.Host+":"+server.Port)
 	if err != nil {
 		fmt.Println(err)
-		os.Exit(1)
-	} else {
-		fmt.Println("broker is running on port :", server.Port)
+		return err
 	}
+	fmt.Println("broker is running on port :", server.Port)
 
-	go server.acceptConnections()
+	// Start goroutine for handling new incoming connections
+	go server.run(listener)
+
+	return nil
 }
 
-func (server *Server) acceptConnections() {
+func (server Server) run(listener net.Listener) {
+	defer server.close(listener)
+	server.acceptConnections(listener)
+}
+
+func (server Server) acceptConnections(listener net.Listener) {
 	for {
-		connection, err := server.listener.Accept()
+		connection, err := listener.Accept()
 		if err != nil {
 			fmt.Println(err)
-			os.Exit(1)
 		}
 		server.Connections <- connection
 	}
 }
 
 // IsConnectionActive checks if provided connection is still active
-func (server *Server) IsConnectionActive(connection net.Conn) bool {
+func (server Server) IsConnectionActive(connection net.Conn) bool {
 	err := connection.SetReadDeadline(time.Now())
 	if err != nil {
 		fmt.Println("Could not set read deadline ", err)
@@ -74,9 +88,9 @@ func (server *Server) IsConnectionActive(connection net.Conn) bool {
 	return isConnected
 }
 
-// Close end server listening of new connection
-func (server *Server) Close() {
-	err := server.listener.Close()
+// close end server listening of new connection
+func (server Server) close(listener net.Listener) {
+	err := listener.Close()
 	if err != nil {
 		fmt.Println("Could not close server listener ", err)
 	}

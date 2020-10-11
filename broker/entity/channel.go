@@ -6,7 +6,7 @@ type Channel struct {
 	Subscribers []User
 }
 
-func (channel *Channel) Contains(user User) bool {
+func (channel Channel) Contains(user User) bool {
 	for _, subscriber := range channel.Subscribers {
 		if subscriber == user && subscriber.ID == user.ID {
 			return true
@@ -15,7 +15,7 @@ func (channel *Channel) Contains(user User) bool {
 	return false
 }
 
-func (channel *Channel) ContainsSubscriber(user User) (bool, int) {
+func (channel Channel) ContainsSubscriber(user User) (bool, int) {
 	for index, subscriber := range channel.Subscribers {
 		if subscriber == user && subscriber.ID == user.ID {
 			return true, index

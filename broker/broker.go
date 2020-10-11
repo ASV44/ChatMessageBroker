@@ -16,33 +16,34 @@ import (
 // Broker represents main structure which contains all related fields for routing message
 type Broker struct {
 	workspace string
-	server    *broker.Server
+	server    broker.Server
 	incoming  chan models.IncomingMessage
 	users     map[string]entity.User
-	channels  map[string]*entity.Channel
+	channels  map[string]entity.Channel
 }
 
+// Init creates and initialize Broker instance
 func Init() Broker {
 	brokerInstance := Broker{workspace: "Matrix"}
-	brokerInstance.server = &broker.Server{
-		Host:           broker.DefaultHost,
-		Port:           broker.DefaultPort,
-		ConnectionType: broker.DefaultType,
-	}
+	brokerInstance.server = broker.InitServer(broker.DefaultHost, broker.DefaultPort, broker.DefaultType)
 	brokerInstance.incoming = make(chan models.IncomingMessage)
 	brokerInstance.users = make(map[string]entity.User)
-	brokerInstance.channels = make(map[string]*entity.Channel)
-	brokerInstance.channels["random"] = &entity.Channel{Id: 0, Name: "random"}
+	brokerInstance.channels = make(map[string]entity.Channel)
+	brokerInstance.channels["random"] = entity.Channel{Id: 0, Name: "random"}
 
 	return brokerInstance
 }
 
 // Start init broker server, creates channels and start receiving and routing of connections
-func (broker Broker) Start() {
-	broker.server.Start()
-	defer broker.server.Close()
+func (broker Broker) Start() error {
+	err := broker.server.Start()
+	if err != nil {
+		return err
+	}
 
 	broker.run()
+
+	return nil
 }
 
 func (broker Broker) listen(connection net.Conn) {
@@ -110,8 +111,9 @@ func (broker Broker) register(connection net.Conn) {
 	newUser := user.ToUserEntity(connection)
 
 	broker.users[newUser.NickName] = newUser
-	subscribers := broker.channels["random"].Subscribers
-	broker.channels["random"].Subscribers = append(subscribers, newUser)
+	randomChannel := broker.channels["random"]
+	randomChannel.Subscribers = append(randomChannel.Subscribers, newUser)
+	broker.channels["random"] = randomChannel
 	broker.show(user, "all")
 
 	go broker.listen(connection)
@@ -134,8 +136,7 @@ func (broker Broker) handleDirectMessage(message models.IncomingMessage) {
 }
 
 func (broker Broker) handleChannelMessage(message models.IncomingMessage) {
-	channel, isPresent := broker.channels[message.Target]
-	if isPresent {
+	if channel, isPresent := broker.channels[message.Target]; isPresent {
 		sender := broker.users[message.Sender.NickName]
 		if channel.Contains(sender) {
 			draft := message.ToOutcomingMessage()
@@ -154,9 +155,9 @@ func (broker Broker) createChannel(sender models.User, name string) {
 	user := broker.users[sender.NickName]
 	_, exist := broker.channels[name]
 	if !exist {
-		channel := &entity.Channel{Id: len(broker.channels), Name: name}
-		broker.channels[name] = channel
+		channel := entity.Channel{Id: len(broker.channels), Name: name}
 		channel.Subscribers = append(channel.Subscribers, user)
+		broker.channels[name] = channel
 		broker.sendMessage(user.Connection, broker.getWorkspaceChannelsMessage())
 	} else {
 		broker.sendMessage(user.Connection, models.OutcomingMessage{Channel: name, Text: "already exist!"})
@@ -165,10 +166,10 @@ func (broker Broker) createChannel(sender models.User, name string) {
 
 func (broker Broker) joinChannel(sender models.User, name string) {
 	user := broker.users[sender.NickName]
-	channel, exist := broker.channels[name]
-	if exist {
+	if channel, exist := broker.channels[name]; exist {
 		if !channel.Contains(user) {
 			channel.Subscribers = append(channel.Subscribers, user)
+			broker.channels[name] = channel
 			broker.sendMessage(user.Connection, broker.getChannelSubscribersMessage(channel))
 		} else {
 			broker.sendMessage(user.Connection, models.OutcomingMessage{Channel: name, Text: "already joined!"})
@@ -215,7 +216,7 @@ func (broker Broker) getWorkspaceUsersMessage() models.OutcomingMessage {
 
 }
 
-func (broker Broker) getChannelSubscribersMessage(channel *entity.Channel) models.OutcomingMessage {
+func (broker Broker) getChannelSubscribersMessage(channel entity.Channel) models.OutcomingMessage {
 	var users []string
 	for _, user := range channel.Subscribers {
 		users = append(users, user.NickName)
