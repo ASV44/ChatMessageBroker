@@ -1,8 +1,7 @@
 package models
 
 import (
-	"net"
-
+	broker "github.com/ASV44/ChatMessageBroker/broker/components"
 	"github.com/ASV44/ChatMessageBroker/broker/entity"
 )
 
@@ -13,6 +12,6 @@ type User struct {
 }
 
 // ToUserEntity map user model to user entity
-func (user User) ToUserEntity(connection net.Conn) entity.User {
+func (user User) ToUserEntity(connection broker.Connection) entity.User {
 	return entity.User{ID: user.ID, NickName: user.NickName, Connection: connection}
 }

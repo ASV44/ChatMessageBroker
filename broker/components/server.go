@@ -19,7 +19,7 @@ type Server struct {
 	Host           string
 	Port           string
 	ConnectionType string
-	Connections    chan net.Conn
+	Connection     chan Connection
 }
 
 // InitServer creates and initialize instance of Server
@@ -28,7 +28,7 @@ func InitServer(host string, port string, connectionType string) Server {
 		Host:           host,
 		Port:           port,
 		ConnectionType: connectionType,
-		Connections:    make(chan net.Conn),
+		Connection:     make(chan Connection),
 	}
 
 	return server
@@ -56,11 +56,12 @@ func (server Server) run(listener net.Listener) {
 
 func (server Server) acceptConnections(listener net.Listener) {
 	for {
-		connection, err := listener.Accept()
+		rawConnection, err := listener.Accept()
 		if err != nil {
-			fmt.Println(err)
+			fmt.Println("Failed to accept new connection ", err)
+		} else {
+			server.Connection <- NewRawTCPConnection(rawConnection)
 		}
-		server.Connections <- connection
 	}
 }
 

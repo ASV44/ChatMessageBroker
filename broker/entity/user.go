@@ -1,10 +1,12 @@
 package entity
 
-import "net"
+import (
+	broker "github.com/ASV44/ChatMessageBroker/broker/components"
+)
 
 // User represents entity of broker user
 type User struct {
 	ID         int
 	NickName   string
-	Connection net.Conn
+	Connection broker.Connection
 }

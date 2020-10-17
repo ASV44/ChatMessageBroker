@@ -16,11 +16,11 @@ type IncomingMessage struct {
 	Time   time.Time `json:"time"`
 }
 
-func (incoming IncomingMessage) ToOutcomingMessage() OutcomingMessage {
+func (incoming IncomingMessage) ToOutgoingMessage() OutgoingMessage {
 	var channel string
 	if incoming.Type == CHANNEL {
 		channel = incoming.Target
 	}
-	return OutcomingMessage{Channel: channel, Sender: incoming.Sender.NickName,
+	return OutgoingMessage{Channel: channel, Sender: incoming.Sender.NickName,
 		Text: incoming.Text, Time: incoming.Time}
 }
