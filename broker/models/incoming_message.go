@@ -2,12 +2,14 @@ package models
 
 import "time"
 
+// Types of message sent from client to broker
 const (
 	CMD     = "cmd"
 	DIRECT  = "direct"
 	CHANNEL = "channel"
 )
 
+// IncomingMessage represents model of message received from client
 type IncomingMessage struct {
 	Type   string    `json:"type"`
 	Target string    `json:"target"`
@@ -16,11 +18,12 @@ type IncomingMessage struct {
 	Time   time.Time `json:"time"`
 }
 
-func (incoming IncomingMessage) ToOutcomingMessage() OutcomingMessage {
+// ToOutgoingMessage map IncomingMessage to OutgoingMessage
+func (incoming IncomingMessage) ToOutgoingMessage() OutgoingMessage {
 	var channel string
 	if incoming.Type == CHANNEL {
 		channel = incoming.Target
 	}
-	return OutcomingMessage{Channel: channel, Sender: incoming.Sender.NickName,
+	return OutgoingMessage{Channel: channel, Sender: incoming.Sender.NickName,
 		Text: incoming.Text, Time: incoming.Time}
 }

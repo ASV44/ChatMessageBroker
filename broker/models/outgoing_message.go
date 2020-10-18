@@ -2,7 +2,8 @@ package models
 
 import "time"
 
-type OutcomingMessage struct {
+// OutgoingMessage represents model of message sent to client
+type OutgoingMessage struct {
 	Channel string    `json:"channel"`
 	Sender  string    `json:"user"`
 	Text    string    `json:"text"`

@@ -1,106 +1,55 @@
-package main
+package client
 
 import (
-	"bufio"
-	"encoding/json"
 	"fmt"
-	"io"
-	"net"
-	"os"
+	"github.com/ASV44/ChatMessageBroker/client/models"
+
+	"github.com/ASV44/ChatMessageBroker/client/components"
 	"strings"
 	"time"
 
-	"github.com/ASV44/ChatMessageBroker/client/models"
 	"github.com/ASV44/ChatMessageBroker/client/models/receiver"
 	"github.com/ASV44/ChatMessageBroker/client/models/sender"
 )
 
-// Constant value of client config
-const (
-	DefaultHost = "localhost"
-	DefaultPort = "8888"
-	DefaultType = "tcp"
-)
-
 // Client represents instance of client connection to broker
 type Client struct {
-	connection  net.Conn
 	user        models.User
-	inputReader *bufio.Reader
-	decoder     *json.Decoder
+	inputReader components.InputReader
+	commService components.CommunicationService
 }
 
-func main() {
-	client := Client{}
-
-	client.Start(DefaultType, DefaultHost, DefaultPort)
+// NewClient creates new instance of Client app
+func NewClient(user models.User, reader components.InputReader, commService components.CommunicationService) Client {
+	return Client{
+		user:        user,
+		inputReader: reader,
+		commService: commService,
+	}
 }
 
 // Start init connection to broker and register new user on broker server
-func (client Client) Start(connectionType string, host string, port string) {
-	var err error
-	client.connection, err = net.Dial(connectionType, host+":"+port)
-	defer client.Close()
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-
-	client.decoder = json.NewDecoder(client.connection)
-	client.inputReader = bufio.NewReader(os.Stdin)
-
-	client.registerUser()
-
+func (client Client) Start() {
 	go client.listenConnection()
 	client.listenUserInput()
 }
 
-// Close end connection to broker
-func (client Client) Close() {
-	err := client.connection.Close()
-	if err != nil {
-		fmt.Println("Could not close client connection ", err)
-	}
-}
-
-func (client Client) registerUser() {
-	var registerMessage receiver.Register
-	err := client.decoder.Decode(&registerMessage)
-	if err != nil {
-		fmt.Println("Could not decode register response ", err)
-	}
-	fmt.Println("Connected at: " + registerMessage.Time.Format("15:04:05 2006-01-02"))
-	fmt.Print(registerMessage.Text)
-
-	nickName := client.getUserInput()
-	client.user = models.User{Id: registerMessage.UserId, NickName: nickName}
-	userJSON, _ := json.Marshal(client.user)
-	_, err = client.connection.Write(userJSON)
-	if err != nil {
-		fmt.Println("Could not write register data ", err)
-	}
-}
-
 func (client Client) listenConnection() {
-	var message receiver.Message
 	for {
-		if err := client.decoder.Decode(&message); err != io.EOF {
-			client.showReceivedMessage(message)
-		} else {
+		message, err := client.commService.GetMessage()
+		if err != nil {
+			fmt.Println("Error at decoding message from client connection ", err)
 			return
 		}
+
+		client.showReceivedMessage(message)
 	}
 }
 
 func (client Client) listenUserInput() {
 	for {
-		client.onUserAction(client.getUserInput())
+		client.onUserAction(client.inputReader.GetUserInput())
 	}
-}
-
-func (client Client) getUserInput() string {
-	data, _ := client.inputReader.ReadString('\n')
-	return strings.TrimSuffix(string(data), "\n")
 }
 
 func (client Client) onUserAction(data string) {
@@ -119,16 +68,8 @@ func (client Client) onUserAction(data string) {
 		messageType = sender.CHANNEL
 	}
 
-	client.sendMessage(messageType, target, text)
-}
-
-func (client Client) sendMessage(messageType string, target string, text string) {
 	message := sender.Message{Type: messageType, Target: target, Sender: client.user, Text: text, Time: time.Now()}
-	jsonData, _ := json.Marshal(message)
-	_, err := client.connection.Write(jsonData)
-	if err != nil {
-		fmt.Println("Could not write client message ", err)
-	}
+	client.commService.SendMessage(message)
 }
 
 func (client Client) showReceivedMessage(message receiver.Message) {
