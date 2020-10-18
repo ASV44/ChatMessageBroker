@@ -3,6 +3,7 @@ package broker
 import (
 	"fmt"
 	"github.com/ASV44/ChatMessageBroker/broker/entity"
+	"github.com/ASV44/ChatMessageBroker/broker/services"
 	"io"
 	"net"
 	"time"
@@ -61,7 +62,7 @@ func (server Server) acceptConnections(listener net.Listener) {
 		if err != nil {
 			fmt.Println("Failed to accept new connection ", err)
 		} else {
-			server.Connection <- entity.NewRawTCPConnection(rawConnection)
+			server.Connection <- entity.NewConnection(rawConnection, services.NewJsonConnIO(rawConnection))
 		}
 	}
 }

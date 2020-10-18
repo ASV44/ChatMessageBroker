@@ -1,21 +1,23 @@
 package broker
 
 import (
+	"github.com/ASV44/ChatMessageBroker/broker/entity"
 	"github.com/ASV44/ChatMessageBroker/broker/models"
+	"github.com/ASV44/ChatMessageBroker/broker/services"
 )
 
 type Dispatcher struct {
 	workspace *Workspace
 	ConnectionManager
 	CommandDispatcher
-	Transmitter
+	services.Transmitter
 }
 
 func NewMessageDispatcher(
 	workspace *Workspace,
 	connectionManager ConnectionManager,
 	cmdDispatcher CommandDispatcher,
-	transmitter Transmitter,
+	transmitter services.Transmitter,
 ) Dispatcher {
 	return Dispatcher{
 		workspace:         workspace,
@@ -54,7 +56,13 @@ func (dispatcher Dispatcher) handleChannelMessage(message models.IncomingMessage
 				}
 			}
 		} else {
-			dispatcher.SendMessageToUser(sender, models.OutgoingMessage{Channel: channel.Name, Text: "not joined yet!"})
+			dispatcher.SendMessageToUser(
+				sender,
+				models.OutgoingMessage{
+					Channel: channel.Name,
+					Text:    entity.ChannelNotJoined{Name: channel.Name}.Error(),
+				},
+			)
 		}
 	}
 }

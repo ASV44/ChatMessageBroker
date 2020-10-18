@@ -40,7 +40,7 @@ func (dispatcher ConnectionDispatcher) RegisterNewConnection(connection entity.C
 	}
 	newUser := user.ToUserEntity(connection)
 	dispatcher.workspace.RegisterNewUser(newUser)
-	dispatcher.cmdDispatcher.show(user, "all")
+	dispatcher.cmdDispatcher.show(user, All)
 
 	fmt.Printf("Connected user: %s Id: %d addrr: %v\n", newUser.NickName, newUser.ID, connection.RemoteAddr())
 

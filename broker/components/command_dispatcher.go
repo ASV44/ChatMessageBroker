@@ -3,28 +3,44 @@ package broker
 import (
 	"github.com/ASV44/ChatMessageBroker/broker/entity"
 	"github.com/ASV44/ChatMessageBroker/broker/models"
+	"github.com/ASV44/ChatMessageBroker/broker/services"
 	"strings"
 	"time"
 )
 
+// Available commands
+const (
+	CreateChannel = "create"
+	JoinChannel   = "join"
+	LeaveChannel  = "leave"
+	Show          = "show"
+)
+
+// Show command options
+const (
+	Users    = "users"
+	Channels = "channels"
+	All      = "all"
+)
+
 type CommandDispatcher struct {
 	workspace *Workspace
-	Transmitter
+	services.Transmitter
 }
 
-func NewCommandDispatcher(workspace *Workspace, transmitter Transmitter) CommandDispatcher {
+func NewCommandDispatcher(workspace *Workspace, transmitter services.Transmitter) CommandDispatcher {
 	return CommandDispatcher{workspace: workspace, Transmitter: transmitter}
 }
 
 func (dispatcher CommandDispatcher) DispatchCommand(message models.IncomingMessage) {
 	switch message.Target {
-	case "create":
+	case CreateChannel:
 		dispatcher.createChannel(message.Sender, message.Text)
-	case "join":
+	case JoinChannel:
 		dispatcher.joinChannel(message.Sender, message.Text)
-	case "leave":
+	case LeaveChannel:
 		dispatcher.leaveChannel(message.Sender, message.Text)
-	case "show":
+	case Show:
 		dispatcher.show(message.Sender, message.Text)
 	}
 }
@@ -63,11 +79,11 @@ func (dispatcher CommandDispatcher) leaveChannel(sender models.User, name string
 func (dispatcher CommandDispatcher) show(sender models.User, param string) {
 	user := dispatcher.workspace.users[sender.NickName]
 	switch param {
-	case "users":
+	case Users:
 		dispatcher.SendMessageToUser(user, dispatcher.getWorkspaceUsersMessage())
-	case "channels":
+	case Channels:
 		dispatcher.SendMessageToUser(user, dispatcher.getWorkspaceChannelsMessage())
-	case "all":
+	case All:
 		dispatcher.SendMessageToUser(user, dispatcher.getWorkspaceChannelsMessage())
 		dispatcher.SendMessageToUser(user, dispatcher.getWorkspaceUsersMessage())
 	default: // Get all users of specific channel if it exist

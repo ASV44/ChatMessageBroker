@@ -15,14 +15,19 @@ type NetworkConnection interface {
 	RemoteAddr() net.Addr
 }
 
+type MessageIO interface {
+	SendMessage(interface{}) error
+	GetMessage(interface{}) error
+}
+
 type Connection struct {
 	NetworkConnection
 	MessageIO
 }
 
-func NewRawTCPConnection(rawConnection net.Conn) Connection {
+func NewConnection(rawConnection net.Conn, io MessageIO) Connection {
 	return Connection{
 		NetworkConnection: rawConnection,
-		MessageIO:         NewJsonConnIO(rawConnection),
+		MessageIO:         io,
 	}
 }

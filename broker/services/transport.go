@@ -1,15 +1,10 @@
-package entity
+package services
 
 import (
 	"encoding/json"
 	"fmt"
 	"io"
 )
-
-type MessageIO interface {
-	SendMessage(interface{}) error
-	GetMessage(interface{}) error
-}
 
 type JsonConnIO struct {
 	encoder *json.Encoder
