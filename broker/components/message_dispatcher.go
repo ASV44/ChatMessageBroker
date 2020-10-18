@@ -6,6 +6,7 @@ import (
 	"github.com/ASV44/ChatMessageBroker/broker/services"
 )
 
+// Dispatcher represents broker component which process new incoming message from client
 type Dispatcher struct {
 	workspace *Workspace
 	ConnectionManager
@@ -13,7 +14,8 @@ type Dispatcher struct {
 	services.Transmitter
 }
 
-func NewMessageDispatcher(
+// NewDispatcher creates new instance of Dispatcher
+func NewDispatcher(
 	workspace *Workspace,
 	connectionManager ConnectionManager,
 	cmdDispatcher CommandDispatcher,
@@ -27,6 +29,7 @@ func NewMessageDispatcher(
 	}
 }
 
+// DispatchMessage process incoming message by type and invoke specific method
 func (dispatcher Dispatcher) DispatchMessage(message models.IncomingMessage) {
 	switch message.Type {
 	case models.CMD:

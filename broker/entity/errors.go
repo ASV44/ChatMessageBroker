@@ -2,6 +2,7 @@ package entity
 
 import "fmt"
 
+// ChannelAlreadyExist is returned when user wants to create channel with name which already exist
 type ChannelAlreadyExist struct {
 	Name string
 }
@@ -10,6 +11,7 @@ func (e ChannelAlreadyExist) Error() string {
 	return fmt.Sprintf("%s channel already exist", e.Name)
 }
 
+// ChannelNotExist is returned when user wants to join channel which does not exist
 type ChannelNotExist struct {
 	Name string
 }
@@ -18,6 +20,7 @@ func (e ChannelNotExist) Error() string {
 	return fmt.Sprintf("Channel with name %s does not exits", e.Name)
 }
 
+// ChannelAlreadyJoined is returned when user wants to join channel which is already joined
 type ChannelAlreadyJoined struct {
 	Name string
 }
@@ -26,6 +29,7 @@ func (e ChannelAlreadyJoined) Error() string {
 	return fmt.Sprintf("%s channel already joined", e.Name)
 }
 
+// ChannelNotJoined is returned when user wants to leave channel which was not joined
 type ChannelNotJoined struct {
 	Name string
 }

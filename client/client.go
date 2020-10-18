@@ -1,33 +1,30 @@
 package client
 
 import (
-	"encoding/json"
 	"fmt"
+	"github.com/ASV44/ChatMessageBroker/client/models"
+
 	"github.com/ASV44/ChatMessageBroker/client/components"
-	"io"
-	"net"
 	"strings"
 	"time"
 
-	"github.com/ASV44/ChatMessageBroker/client/models"
 	"github.com/ASV44/ChatMessageBroker/client/models/receiver"
 	"github.com/ASV44/ChatMessageBroker/client/models/sender"
 )
 
 // Client represents instance of client connection to broker
 type Client struct {
-	connection  net.Conn
 	user        models.User
-	decoder     *json.Decoder
 	inputReader components.InputReader
+	commService components.CommunicationService
 }
 
-func NewClient(connection net.Conn, user models.User, reader components.InputReader) Client {
+// NewClient creates new instance of Client app
+func NewClient(user models.User, reader components.InputReader, commService components.CommunicationService) Client {
 	return Client{
-		connection:  connection,
 		user:        user,
 		inputReader: reader,
-		decoder:     json.NewDecoder(connection),
+		commService: commService,
 	}
 }
 
@@ -38,14 +35,14 @@ func (client Client) Start() {
 }
 
 func (client Client) listenConnection() {
-	var message receiver.Message
 	for {
-		if err := client.decoder.Decode(&message); err != io.EOF {
-			client.showReceivedMessage(message)
-		} else {
+		message, err := client.commService.GetMessage()
+		if err != nil {
 			fmt.Println("Error at decoding message from client connection ", err)
 			return
 		}
+
+		client.showReceivedMessage(message)
 	}
 }
 
@@ -71,16 +68,8 @@ func (client Client) onUserAction(data string) {
 		messageType = sender.CHANNEL
 	}
 
-	client.sendMessage(messageType, target, text)
-}
-
-func (client Client) sendMessage(messageType string, target string, text string) {
 	message := sender.Message{Type: messageType, Target: target, Sender: client.user, Text: text, Time: time.Now()}
-	jsonData, _ := json.Marshal(message)
-	_, err := client.connection.Write(jsonData)
-	if err != nil {
-		fmt.Println("Could not write client message ", err)
-	}
+	client.commService.SendMessage(message)
 }
 
 func (client Client) showReceivedMessage(message receiver.Message) {

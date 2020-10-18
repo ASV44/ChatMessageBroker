@@ -3,9 +3,9 @@ package broker
 import (
 	"fmt"
 	"github.com/ASV44/ChatMessageBroker/broker/components"
-	"github.com/ASV44/ChatMessageBroker/broker/entity"
 	"github.com/ASV44/ChatMessageBroker/broker/models"
-	"github.com/ASV44/ChatMessageBroker/broker/services"
+	services2 "github.com/ASV44/ChatMessageBroker/broker/services"
+	"github.com/ASV44/ChatMessageBroker/common"
 	"io"
 )
 
@@ -20,14 +20,14 @@ type Broker struct {
 // Init creates and initialize Broker instance
 func Init() Broker {
 	workspace := broker.NewWorkspace("Matrix")
-	transmitter := services.NewCommunicationManager()
+	transmitter := services2.NewCommunicationManager()
 	cmdDispatcher := broker.NewCommandDispatcher(&workspace, transmitter)
 	connDispatcher := broker.NewConnectionDispatcher(&workspace, cmdDispatcher)
 	return Broker{
 		workspace:  workspace,
 		server:     broker.InitServer(broker.DefaultHost, broker.DefaultPort, broker.DefaultType),
 		incoming:   make(chan models.IncomingMessage),
-		dispatcher: broker.NewMessageDispatcher(&workspace, connDispatcher, cmdDispatcher, transmitter),
+		dispatcher: broker.NewDispatcher(&workspace, connDispatcher, cmdDispatcher, transmitter),
 	}
 }
 
@@ -43,7 +43,7 @@ func (broker Broker) Start() error {
 	return nil
 }
 
-func (broker Broker) listenIncomingMessages(connection entity.Connection) {
+func (broker Broker) listenIncomingMessages(connection common.Connection) {
 	var message models.IncomingMessage
 	for {
 		if err := connection.GetMessage(&message); err != io.EOF {
@@ -65,7 +65,7 @@ func (broker Broker) run() {
 	}
 }
 
-func (broker Broker) register(connection entity.Connection) {
+func (broker Broker) register(connection common.Connection) {
 	err := broker.dispatcher.RegisterNewConnection(connection)
 	switch err.(type) {
 	case nil:
@@ -76,7 +76,7 @@ func (broker Broker) register(connection entity.Connection) {
 	}
 }
 
-func (broker Broker) close(connection entity.Connection) {
+func (broker Broker) close(connection common.Connection) {
 	err := connection.Close()
 	if err != nil {
 		fmt.Println("Error during closing connection ", err)

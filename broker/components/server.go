@@ -2,8 +2,7 @@ package broker
 
 import (
 	"fmt"
-	"github.com/ASV44/ChatMessageBroker/broker/entity"
-	"github.com/ASV44/ChatMessageBroker/broker/services"
+	"github.com/ASV44/ChatMessageBroker/common"
 	"io"
 	"net"
 	"time"
@@ -21,7 +20,7 @@ type Server struct {
 	Host           string
 	Port           string
 	ConnectionType string
-	Connection     chan entity.Connection
+	Connection     chan common.Connection
 }
 
 // InitServer creates and initialize instance of Server
@@ -30,7 +29,7 @@ func InitServer(host string, port string, connectionType string) Server {
 		Host:           host,
 		Port:           port,
 		ConnectionType: connectionType,
-		Connection:     make(chan entity.Connection),
+		Connection:     make(chan common.Connection),
 	}
 
 	return server
@@ -62,7 +61,7 @@ func (server Server) acceptConnections(listener net.Listener) {
 		if err != nil {
 			fmt.Println("Failed to accept new connection ", err)
 		} else {
-			server.Connection <- entity.NewConnection(rawConnection, services.NewJsonConnIO(rawConnection))
+			server.Connection <- common.NewConnection(rawConnection, common.NewJSONConnIO(rawConnection))
 		}
 	}
 }

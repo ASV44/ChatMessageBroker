@@ -23,15 +23,18 @@ const (
 	All      = "all"
 )
 
+// CommandDispatcher represents broker component which process new incoming command from client
 type CommandDispatcher struct {
 	workspace *Workspace
 	services.Transmitter
 }
 
+// NewCommandDispatcher creates new instance of CommandDispatcher
 func NewCommandDispatcher(workspace *Workspace, transmitter services.Transmitter) CommandDispatcher {
 	return CommandDispatcher{workspace: workspace, Transmitter: transmitter}
 }
 
+// DispatchCommand process incoming command by type and invoke specific method
 func (dispatcher CommandDispatcher) DispatchCommand(message models.IncomingMessage) {
 	switch message.Target {
 	case CreateChannel:

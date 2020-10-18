@@ -1,12 +1,12 @@
 package app
 
 import (
-	"encoding/json"
 	"fmt"
 	"github.com/ASV44/ChatMessageBroker/client"
 	"github.com/ASV44/ChatMessageBroker/client/components"
 	"github.com/ASV44/ChatMessageBroker/client/models"
 	"github.com/ASV44/ChatMessageBroker/client/models/receiver"
+	"github.com/ASV44/ChatMessageBroker/common"
 	"net"
 )
 
@@ -37,30 +37,34 @@ func Init(host string, port string, connectionType string) App {
 
 // Start init connection to broker and register new user on broker server
 func (app App) Start() error {
-	connection, err := net.Dial(app.ConnectionType, app.Host+":"+app.Port)
+	rawConnection, err := net.Dial(app.ConnectionType, app.Host+":"+app.Port)
 	if err != nil {
 		fmt.Println("Connection to server failed ", err)
 		return err
 	}
+
+	connection := common.Connection{
+		NetworkConnection: rawConnection,
+		MessageIO:         common.NewJSONConnIO(rawConnection),
+	}
+
 	defer app.close(connection)
 
-	decoder := json.NewDecoder(connection)
-
-	user, err := app.registerUser(connection, decoder)
+	user, err := app.registerUser(connection)
 	if err != nil {
 		fmt.Println("User registration failed ", err)
 		return err
 	}
 
-	clientApp := client.NewClient(connection, user, app.inputReader)
+	clientApp := client.NewClient(user, app.inputReader, components.NewCommunicationManager(connection))
 	clientApp.Start()
 
 	return nil
 }
 
-func (app App) registerUser(connection net.Conn, decoder *json.Decoder) (models.User, error) {
+func (app App) registerUser(connection common.Connection) (models.User, error) {
 	var registerMessage receiver.Register
-	err := decoder.Decode(&registerMessage)
+	err := connection.GetMessage(&registerMessage)
 	if err != nil {
 		fmt.Println("Could not decode user register response ", err)
 		return models.User{}, err
@@ -69,9 +73,8 @@ func (app App) registerUser(connection net.Conn, decoder *json.Decoder) (models.
 	fmt.Print(registerMessage.Text)
 
 	nickName := app.inputReader.GetUserInput()
-	user := models.User{ID: registerMessage.UserId, NickName: nickName}
-	userJSON, _ := json.Marshal(user)
-	_, err = connection.Write(userJSON)
+	user := models.User{ID: registerMessage.UserID, NickName: nickName}
+	err = connection.SendMessage(user)
 	if err != nil {
 		fmt.Println("Could not write user register data ", err)
 		return user, err
@@ -81,7 +84,7 @@ func (app App) registerUser(connection net.Conn, decoder *json.Decoder) (models.
 }
 
 // close end connection to broker
-func (app App) close(connection net.Conn) {
+func (app App) close(connection common.Connection) {
 	err := connection.Close()
 	if err != nil {
 		fmt.Println("Could not close client connection ", err)
