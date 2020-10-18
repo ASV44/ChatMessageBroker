@@ -1,10 +1,8 @@
 package broker
 
 import (
-	"fmt"
 	"github.com/ASV44/ChatMessageBroker/broker/entity"
 	"github.com/ASV44/ChatMessageBroker/broker/models"
-	"time"
 )
 
 type Workspace struct {
@@ -24,32 +22,11 @@ func NewWorkspace(name string) Workspace {
 	return workspace
 }
 
-func (workspace Workspace) RegisterNewUser(connection Connection) error {
-	text := fmt.Sprintf("Welcome to %s workspace!\nEnter nickname:", workspace.name)
-	message := models.Register{UserId: len(workspace.users), Text: text, Time: time.Now()}
-	err := connection.SendMessage(message)
-	if err != nil {
-		fmt.Println("Could not send register data ", err)
-		return err
-	}
-
-	var user models.User
-	err = connection.GetMessage(&user)
-	if err != nil {
-		fmt.Println("Could not receive register data from user ", err)
-		return err
-	}
-	newUser := user.ToUserEntity(connection)
-
-	workspace.users[newUser.NickName] = newUser
+func (workspace Workspace) RegisterNewUser(user entity.User) {
+	workspace.users[user.NickName] = user
 	randomChannel := workspace.channels["random"]
-	randomChannel.Subscribers = append(randomChannel.Subscribers, newUser)
+	randomChannel.Subscribers = append(randomChannel.Subscribers, user)
 	workspace.channels["random"] = randomChannel
-	//TODO: Add sending of all users and channels at registration
-
-	fmt.Printf("Connected user: %s Id: %d addrr: %v\n", newUser.NickName, newUser.ID, connection.RemoteAddr())
-
-	return nil
 }
 
 func (workspace Workspace) CreateChannel(sender models.User, name string) error {

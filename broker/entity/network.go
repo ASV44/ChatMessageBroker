@@ -1,6 +1,8 @@
-package broker
+package entity
 
-import "net"
+import (
+	"net"
+)
 
 type NetworkConnection interface {
 	// Close closes the connection.

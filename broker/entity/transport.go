@@ -1,4 +1,4 @@
-package broker
+package entity
 
 import (
 	"encoding/json"

@@ -1,7 +1,6 @@
 package broker
 
 import (
-	"github.com/ASV44/ChatMessageBroker/broker"
 	"github.com/ASV44/ChatMessageBroker/broker/entity"
 	"github.com/ASV44/ChatMessageBroker/broker/models"
 	"strings"
@@ -10,10 +9,11 @@ import (
 
 type CommandDispatcher struct {
 	workspace *Workspace
+	Transmitter
 }
 
-func NewCommandDispatcher(workspace *Workspace) CommandDispatcher {
-	return CommandDispatcher{workspace: workspace}
+func NewCommandDispatcher(workspace *Workspace, transmitter Transmitter) CommandDispatcher {
+	return CommandDispatcher{workspace: workspace, Transmitter: transmitter}
 }
 
 func (dispatcher CommandDispatcher) DispatchCommand(message models.IncomingMessage) {
@@ -33,46 +33,46 @@ func (dispatcher CommandDispatcher) createChannel(sender models.User, name strin
 	user := dispatcher.workspace.users[sender.NickName]
 	err := dispatcher.workspace.CreateChannel(sender, name)
 	if err != nil {
-		broker.SendMessageToUser(user, models.OutgoingMessage{Channel: name, Text: err.Error()})
+		dispatcher.SendMessageToUser(user, models.OutgoingMessage{Channel: name, Text: err.Error()})
 		return
 	}
 
-	broker.SendMessageToUser(user, dispatcher.getWorkspaceChannelsMessage())
+	dispatcher.SendMessageToUser(user, dispatcher.getWorkspaceChannelsMessage())
 }
 
 func (dispatcher CommandDispatcher) joinChannel(sender models.User, name string) {
 	user := dispatcher.workspace.users[sender.NickName]
 	err := dispatcher.workspace.AddUserToChannel(sender, name)
 	if err != nil {
-		broker.SendMessageToUser(user, models.OutgoingMessage{Channel: name, Text: err.Error()})
+		dispatcher.SendMessageToUser(user, models.OutgoingMessage{Channel: name, Text: err.Error()})
 	}
 
-	broker.SendMessageToUser(user, dispatcher.getChannelSubscribersMessage(dispatcher.workspace.channels[name]))
+	dispatcher.SendMessageToUser(user, dispatcher.getChannelSubscribersMessage(dispatcher.workspace.channels[name]))
 }
 
 func (dispatcher CommandDispatcher) leaveChannel(sender models.User, name string) {
 	user := dispatcher.workspace.users[sender.NickName]
 	err := dispatcher.workspace.RemoveUserFromChannel(sender, name)
 	if err != nil {
-		broker.SendMessageToUser(user, models.OutgoingMessage{Channel: name, Text: err.Error()})
+		dispatcher.SendMessageToUser(user, models.OutgoingMessage{Channel: name, Text: err.Error()})
 	}
 
-	broker.SendMessageToUser(user, dispatcher.getChannelSubscribersMessage(dispatcher.workspace.channels[name]))
+	dispatcher.SendMessageToUser(user, dispatcher.getChannelSubscribersMessage(dispatcher.workspace.channels[name]))
 }
 
 func (dispatcher CommandDispatcher) show(sender models.User, param string) {
 	user := dispatcher.workspace.users[sender.NickName]
 	switch param {
 	case "users":
-		broker.SendMessageToUser(user, dispatcher.getWorkspaceUsersMessage())
+		dispatcher.SendMessageToUser(user, dispatcher.getWorkspaceUsersMessage())
 	case "channels":
-		broker.SendMessageToUser(user, dispatcher.getWorkspaceChannelsMessage())
+		dispatcher.SendMessageToUser(user, dispatcher.getWorkspaceChannelsMessage())
 	case "all":
-		broker.SendMessageToUser(user, dispatcher.getWorkspaceChannelsMessage())
-		broker.SendMessageToUser(user, dispatcher.getWorkspaceUsersMessage())
+		dispatcher.SendMessageToUser(user, dispatcher.getWorkspaceChannelsMessage())
+		dispatcher.SendMessageToUser(user, dispatcher.getWorkspaceUsersMessage())
 	default: // Get all users of specific channel if it exist
 		if channel, exist := dispatcher.workspace.channels[param]; exist {
-			broker.SendMessageToUser(user, dispatcher.getChannelSubscribersMessage(channel))
+			dispatcher.SendMessageToUser(user, dispatcher.getChannelSubscribersMessage(channel))
 		}
 	}
 }
