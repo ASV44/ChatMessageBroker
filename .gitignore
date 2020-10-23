@@ -13,5 +13,5 @@
 .idea/
 .DS_Store
 /data
-/vendor
+*/vendor
 /cache_data

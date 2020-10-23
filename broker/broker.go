@@ -3,8 +3,10 @@ package broker
 import (
 	"fmt"
 	"github.com/ASV44/ChatMessageBroker/broker/components"
+	"github.com/ASV44/ChatMessageBroker/broker/config"
+	"github.com/ASV44/ChatMessageBroker/broker/entity"
 	"github.com/ASV44/ChatMessageBroker/broker/models"
-	services2 "github.com/ASV44/ChatMessageBroker/broker/services"
+	"github.com/ASV44/ChatMessageBroker/broker/services"
 	"github.com/ASV44/ChatMessageBroker/common"
 	"io"
 )
@@ -18,17 +20,23 @@ type Broker struct {
 }
 
 // Init creates and initialize Broker instance
-func Init() Broker {
-	workspace := broker.NewWorkspace("Matrix")
-	transmitter := services2.NewCommunicationManager()
+func Init(configFilePath string) (Broker, error) {
+	configManager, err := config.NewManager(configFilePath)
+	if err != nil {
+		return Broker{}, entity.ConfigInitFailed{Message: err.Error()}
+	}
+
+	workspace := broker.NewWorkspace(configManager.Workspace())
+	transmitter := services.NewCommunicationManager()
 	cmdDispatcher := broker.NewCommandDispatcher(&workspace, transmitter)
 	connDispatcher := broker.NewConnectionDispatcher(&workspace, cmdDispatcher)
+
 	return Broker{
 		workspace:  workspace,
-		server:     broker.InitServer(broker.DefaultHost, broker.DefaultPort, broker.DefaultType),
+		server:     broker.InitServer(configManager.TCPAddress(), configManager.TCPServerConnectionType()),
 		incoming:   make(chan models.IncomingMessage),
 		dispatcher: broker.NewDispatcher(&workspace, connDispatcher, cmdDispatcher, transmitter),
-	}
+	}, nil
 }
 
 // Start init broker server, creates channels and start receiving and routing of connections
