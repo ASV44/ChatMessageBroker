@@ -3,6 +3,7 @@ package client
 import (
 	"fmt"
 	"github.com/ASV44/ChatMessageBroker/client/models"
+	"io"
 
 	"github.com/ASV44/ChatMessageBroker/client/components"
 	"strings"
@@ -37,12 +38,15 @@ func (client Client) Start() {
 func (client Client) listenConnection() {
 	for {
 		message, err := client.commService.GetMessage()
-		if err != nil {
-			fmt.Println("Error at decoding message from client connection ", err)
+		switch err {
+		case io.EOF:
+			fmt.Println("Connection closed by server ", err)
 			return
+		case nil:
+			client.showReceivedMessage(message)
+		default:
+			fmt.Println("Error at decoding message ", err)
 		}
-
-		client.showReceivedMessage(message)
 	}
 }
 

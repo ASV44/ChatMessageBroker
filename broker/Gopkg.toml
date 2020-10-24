@@ -24,11 +24,6 @@
 #   go-tests = true
 #   unused-packages = true
 
-
-[[constraint]]
-  branch = "master"
-  name = "github.com/ASV44/ChatMessageBroker"
-
 [[constraint]]
   name = "github.com/spf13/viper"
   version = "1.7.1"

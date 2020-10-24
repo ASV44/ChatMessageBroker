@@ -51,13 +51,18 @@ func (broker Broker) Start() error {
 	return nil
 }
 
-func (broker Broker) listenIncomingMessages(connection common.Connection) {
+func (broker Broker) listenIncomingMessages(user entity.User) {
 	var message models.IncomingMessage
 	for {
-		if err := connection.GetMessage(&message); err != io.EOF {
-			broker.incoming <- message
-		} else {
+		err := user.Connection.GetMessage(&message)
+		switch err {
+		case io.EOF:
+			fmt.Println("Disconnected ", user.NickName, user.ID)
 			return
+		case nil:
+			broker.incoming <- message
+		default:
+			fmt.Println("Error at decoding message ", user.NickName, user.ID, err)
 		}
 	}
 }
@@ -74,10 +79,10 @@ func (broker Broker) run() {
 }
 
 func (broker Broker) register(connection common.Connection) {
-	err := broker.dispatcher.RegisterNewConnection(connection)
+	user, err := broker.dispatcher.RegisterNewConnection(connection)
 	switch err.(type) {
 	case nil:
-		broker.listenIncomingMessages(connection)
+		broker.listenIncomingMessages(user)
 	default:
 		fmt.Println("Register of new user failed ", err)
 		broker.close(connection)

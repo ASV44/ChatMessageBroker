@@ -5,7 +5,6 @@ import (
 	"github.com/ASV44/ChatMessageBroker/client/models/receiver"
 	"github.com/ASV44/ChatMessageBroker/client/models/sender"
 	"github.com/ASV44/ChatMessageBroker/common"
-	"io"
 )
 
 // CommunicationService represents abstraction of for performing message communication with broker
@@ -44,9 +43,7 @@ func (manager CommunicationManager) SendMessage(message sender.Message) {
 // GetMessage get from broker connection and handle error
 func (manager CommunicationManager) GetMessage() (receiver.Message, error) {
 	var message receiver.Message
-	if err := manager.connection.GetMessage(&message); err != nil && err != io.EOF {
-		return receiver.Message{}, err
-	}
+	err := manager.connection.GetMessage(&message)
 
-	return message, nil
+	return message, err
 }
