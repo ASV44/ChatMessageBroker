@@ -8,26 +8,17 @@ import (
 	"time"
 )
 
-// Constant value of server config
-const (
-	DefaultHost = "localhost"
-	DefaultPort = "8888"
-	DefaultType = "tcp"
-)
-
 // Server represents instance of running server
 type Server struct {
-	Host           string
-	Port           string
+	Address        string
 	ConnectionType string
 	Connection     chan common.Connection
 }
 
 // InitServer creates and initialize instance of Server
-func InitServer(host string, port string, connectionType string) Server {
+func InitServer(address string, connectionType string) Server {
 	server := Server{
-		Host:           host,
-		Port:           port,
+		Address:        address,
 		ConnectionType: connectionType,
 		Connection:     make(chan common.Connection),
 	}
@@ -37,12 +28,12 @@ func InitServer(host string, port string, connectionType string) Server {
 
 // Start init and start tcp server and start accepting connections
 func (server Server) Start() error {
-	listener, err := net.Listen(server.ConnectionType, server.Host+":"+server.Port)
+	listener, err := net.Listen(server.ConnectionType, server.Address)
 	if err != nil {
 		fmt.Println(err)
 		return err
 	}
-	fmt.Println("broker is running on port :", server.Port)
+	fmt.Println("broker is running on :", server.Address)
 
 	// Start goroutine for handling new incoming connections
 	go server.run(listener)

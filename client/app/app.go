@@ -10,13 +10,6 @@ import (
 	"net"
 )
 
-// Constant value of client config
-const (
-	DefaultHost = "localhost"
-	DefaultPort = "8888"
-	DefaultType = "tcp"
-)
-
 // App represents instance of the client app
 type App struct {
 	Host           string

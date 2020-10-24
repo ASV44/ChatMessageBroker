@@ -2,7 +2,6 @@ package common
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 )
 
@@ -20,9 +19,6 @@ func NewJSONConnIO(readWriter io.ReadWriter) JSONConnIO {
 // SendMessage send JSON message to client connection
 func (conn JSONConnIO) SendMessage(message interface{}) error {
 	err := conn.encoder.Encode(&message)
-	if err != nil {
-		fmt.Println("Could not write message data ", err)
-	}
 
 	return err
 }
@@ -30,9 +26,6 @@ func (conn JSONConnIO) SendMessage(message interface{}) error {
 // GetMessage get message from client connection
 func (conn JSONConnIO) GetMessage(message interface{}) error {
 	err := conn.decoder.Decode(&message)
-	if err != nil && err != io.EOF {
-		fmt.Println("Could not decode message data ", err)
-	}
 
 	return err
 }

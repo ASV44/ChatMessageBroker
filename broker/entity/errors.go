@@ -2,6 +2,24 @@ package entity
 
 import "fmt"
 
+// ConfigInitFailed is returned when app failed to init config from config file at initialization phase
+type AppInitFailed struct {
+	Message string
+}
+
+func (e AppInitFailed) Error() string {
+	return fmt.Sprintf("Broker app init failed: %s", e.Message)
+}
+
+// ConfigInitFailed is returned when app failed to init config from config file at initialization phase
+type ConfigInitFailed struct {
+	Message string
+}
+
+func (e ConfigInitFailed) Error() string {
+	return fmt.Sprintf("Init of config failed: %s", e.Message)
+}
+
 // ChannelAlreadyExist is returned when user wants to create channel with name which already exist
 type ChannelAlreadyExist struct {
 	Name string

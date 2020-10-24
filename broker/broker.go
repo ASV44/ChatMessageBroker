@@ -3,8 +3,10 @@ package broker
 import (
 	"fmt"
 	"github.com/ASV44/ChatMessageBroker/broker/components"
+	"github.com/ASV44/ChatMessageBroker/broker/config"
+	"github.com/ASV44/ChatMessageBroker/broker/entity"
 	"github.com/ASV44/ChatMessageBroker/broker/models"
-	services2 "github.com/ASV44/ChatMessageBroker/broker/services"
+	"github.com/ASV44/ChatMessageBroker/broker/services"
 	"github.com/ASV44/ChatMessageBroker/common"
 	"io"
 )
@@ -18,17 +20,23 @@ type Broker struct {
 }
 
 // Init creates and initialize Broker instance
-func Init() Broker {
-	workspace := broker.NewWorkspace("Matrix")
-	transmitter := services2.NewCommunicationManager()
+func Init(configFilePath string) (Broker, error) {
+	configManager, err := config.NewManager(configFilePath)
+	if err != nil {
+		return Broker{}, entity.ConfigInitFailed{Message: err.Error()}
+	}
+
+	workspace := broker.NewWorkspace(configManager.Workspace())
+	transmitter := services.NewCommunicationManager()
 	cmdDispatcher := broker.NewCommandDispatcher(&workspace, transmitter)
 	connDispatcher := broker.NewConnectionDispatcher(&workspace, cmdDispatcher)
+
 	return Broker{
 		workspace:  workspace,
-		server:     broker.InitServer(broker.DefaultHost, broker.DefaultPort, broker.DefaultType),
+		server:     broker.InitServer(configManager.TCPAddress(), configManager.TCPServerConnectionType()),
 		incoming:   make(chan models.IncomingMessage),
 		dispatcher: broker.NewDispatcher(&workspace, connDispatcher, cmdDispatcher, transmitter),
-	}
+	}, nil
 }
 
 // Start init broker server, creates channels and start receiving and routing of connections
@@ -43,13 +51,18 @@ func (broker Broker) Start() error {
 	return nil
 }
 
-func (broker Broker) listenIncomingMessages(connection common.Connection) {
+func (broker Broker) listenIncomingMessages(user entity.User) {
 	var message models.IncomingMessage
 	for {
-		if err := connection.GetMessage(&message); err != io.EOF {
-			broker.incoming <- message
-		} else {
+		err := user.Connection.GetMessage(&message)
+		switch err {
+		case io.EOF:
+			fmt.Println("Disconnected ", user.NickName, user.ID)
 			return
+		case nil:
+			broker.incoming <- message
+		default:
+			fmt.Println("Error at decoding message ", user.NickName, user.ID, err)
 		}
 	}
 }
@@ -66,10 +79,10 @@ func (broker Broker) run() {
 }
 
 func (broker Broker) register(connection common.Connection) {
-	err := broker.dispatcher.RegisterNewConnection(connection)
+	user, err := broker.dispatcher.RegisterNewConnection(connection)
 	switch err.(type) {
 	case nil:
-		broker.listenIncomingMessages(connection)
+		broker.listenIncomingMessages(user)
 	default:
 		fmt.Println("Register of new user failed ", err)
 		broker.close(connection)
