@@ -12,6 +12,8 @@ const (
 	tcpAddress        = "tcp_server.address"
 	tcpConnectionType = "tcp_server.connection_type"
 
+	httpAddress = "http_server.address"
+
 	shutdownTimeout = "timeout.shutdown"
 	readTimeout     = "timeout.read"
 	writeTimeout    = "timeout.write"
@@ -47,6 +49,8 @@ func (manager *Manager) SetDefaults() {
 	manager.viperConfig.SetDefault(tcpAddress, "localhost:8888")
 	manager.viperConfig.SetDefault(tcpConnectionType, "tcp")
 
+	manager.viperConfig.SetDefault(httpAddress, ":8080")
+
 	manager.viperConfig.SetDefault(shutdownTimeout, 15*time.Second)
 	manager.viperConfig.SetDefault(readTimeout, 10*time.Second)
 	manager.viperConfig.SetDefault(writeTimeout, 10*time.Second)
@@ -79,6 +83,11 @@ func (manager *Manager) TCPAddress() string {
 // TCPServerConnectionType returns connection type used for net.Listen
 func (manager *Manager) TCPServerConnectionType() string {
 	return manager.viperConfig.GetString(tcpConnectionType)
+}
+
+// HTTPAddress returns port number for HTTP server
+func (manager *Manager) HTTPAddress() string {
+	return manager.viperConfig.GetString(httpAddress)
 }
 
 // ReadTimeout returns read timeout for http server

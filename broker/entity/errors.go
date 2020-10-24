@@ -2,7 +2,7 @@ package entity
 
 import "fmt"
 
-// ConfigInitFailed is returned when app failed to init config from config file at initialization phase
+// AppInitFailed is returned when app initialization failed
 type AppInitFailed struct {
 	Message string
 }

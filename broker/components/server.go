@@ -4,11 +4,8 @@ import (
 	"fmt"
 	"github.com/ASV44/ChatMessageBroker/common"
 	"io"
-	"log"
 	"net"
 	"time"
-
-	"github.com/gorilla/websocket"
 )
 
 // Server represents instance of running server
@@ -16,8 +13,6 @@ type Server struct {
 	Address        string
 	ConnectionType string
 	Connection     chan common.Connection
-	WebSocketConn  chan *websocket.Conn
-	upgrader 		   websocket.Upgrader
 }
 
 // InitServer creates and initialize instance of Server
@@ -61,7 +56,6 @@ func (server Server) acceptConnections(listener net.Listener) {
 			server.Connection <- common.NewConnection(rawConnection, common.NewJSONConnIO(rawConnection))
 		}
 	}
-	server.Connections <- connection
 }
 
 // IsConnectionActive checks if provided connection is still active
@@ -86,22 +80,6 @@ func (server Server) IsConnectionActive(connection net.Conn) bool {
 	}
 
 	return isConnected
-}
-
-// serveWebSocket handles websocket requests from the peer.
-func (server *erver) serveWebSocket(w http.ResponseWriter, r *http.Request) {
-	conn, err := server.upgrader.Upgrade(w, r, nil)
-	if err != nil {
-		log.Println(err)
-		return
-	}
-	//client := &Client{hub: hub, conn: conn, send: make(chan []byte, 256)}
-	//client.hub.register <- client
-
-	// Allow collection of memory referenced by the caller by doing all work in
-	// new goroutines.
-	go client.writePump()
-	go client.readPump()
 }
 
 // close end server listening of new connection

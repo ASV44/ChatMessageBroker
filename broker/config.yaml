@@ -1,8 +1,11 @@
 workspace: Matrix   # Workspace name. Change to use your personal workspace name
 
-tcp_server:
+tcp_server: # TCP server used for raw socket connection configuration
   address: 0.0.0.0:8888   # TCP address service will listen on, default ":8888"
   connection_type: tcp    # net.Listen connection type
+
+http_server: # HTTP server used for websocket connection configuration
+  address: 0.0.0.0:8080  # HTTP server port number
 
 timeout:
   shutdown: 15s         # timeout for graceful shutdown, default "15s"

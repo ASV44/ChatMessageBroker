@@ -29,7 +29,7 @@ type Connection struct {
 }
 
 // NewConnection creates new instance of Connection
-func NewConnection(rawConnection net.Conn, io MessageIO) Connection {
+func NewConnection(rawConnection NetworkConnection, io MessageIO) Connection {
 	return Connection{
 		NetworkConnection: rawConnection,
 		MessageIO:         io,
