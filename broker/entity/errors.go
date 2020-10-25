@@ -20,6 +20,15 @@ func (e ConfigInitFailed) Error() string {
 	return fmt.Sprintf("Init of config failed: %s", e.Message)
 }
 
+// WebsocketConfigDecodingFailed is returned when app failed to decode websocket config from map to struct
+type WebsocketConfigDecodingFailed struct {
+	Message string
+}
+
+func (e WebsocketConfigDecodingFailed) Error() string {
+	return fmt.Sprintf("Decode of websocket config failed: %s", e.Message)
+}
+
 // ChannelAlreadyExist is returned when user wants to create channel with name which already exist
 type ChannelAlreadyExist struct {
 	Name string

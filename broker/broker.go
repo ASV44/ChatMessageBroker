@@ -8,13 +8,14 @@ import (
 	"github.com/ASV44/ChatMessageBroker/broker/models"
 	"github.com/ASV44/ChatMessageBroker/broker/services"
 	"github.com/ASV44/ChatMessageBroker/common"
+	"github.com/gorilla/websocket"
 	"io"
 )
 
 // Broker represents main structure which contains all related fields for routing message
 type Broker struct {
 	workspace  broker.Workspace
-	tcpServer  broker.Server
+	tcpServer  broker.TCPServer
 	httpServer broker.HTTPServer
 	incoming   chan models.IncomingMessage
 	dispatcher broker.Dispatcher
@@ -28,17 +29,26 @@ func Init(configFilePath string) (Broker, error) {
 		return Broker{}, entity.ConfigInitFailed{Message: err.Error()}
 	}
 
+	websocketConfig, err := config.NewWebsocketConnectionSettings(configManager)
+	if err != nil {
+		return Broker{}, entity.WebsocketConfigDecodingFailed{Message: err.Error()}
+	}
+
 	workspace := broker.NewWorkspace(configManager.Workspace())
 	transmitter := services.NewCommunicationManager()
 	cmdDispatcher := broker.NewCommandDispatcher(&workspace, transmitter)
 	connDispatcher := broker.NewConnectionDispatcher(&workspace, cmdDispatcher)
 
-	websocketService := services.NewWebsocketProcessor()
+	websocketService := services.NewWebsocketProcessor(websocketConfig)
+	upgrader := websocket.Upgrader{
+		ReadBufferSize:  websocketConfig.ReadBufferSize,
+		WriteBufferSize: websocketConfig.WriteBufferSize,
+	}
 
 	return Broker{
 		workspace:  workspace,
 		tcpServer:  broker.InitServer(configManager.TCPAddress(), configManager.TCPServerConnectionType()),
-		httpServer: broker.InitHTTPServer(configManager, broker.NewRouter(websocketService)),
+		httpServer: broker.InitHTTPServer(configManager, broker.NewRouter(upgrader, websocketService)),
 		incoming:   make(chan models.IncomingMessage),
 		dispatcher: broker.NewDispatcher(&workspace, connDispatcher, cmdDispatcher, transmitter),
 		websocket:  websocketService,

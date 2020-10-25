@@ -13,8 +13,8 @@ type HTTPServer struct {
 	instance *http.Server
 }
 
-// InitHTTPServer creates and initialize instance of Server
-func InitHTTPServer(config *config.Manager, router *mux.Router) HTTPServer {
+// InitHTTPServer creates and initialize instance of TCPServer
+func InitHTTPServer(config config.Manager, router *mux.Router) HTTPServer {
 	instance := &http.Server{
 		Addr:         config.HTTPAddress(),
 		Handler:      router,

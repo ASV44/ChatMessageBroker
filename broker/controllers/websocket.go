@@ -10,13 +10,8 @@ type WebsocketService interface {
 	HandleNewConnection(connection *websocket.Conn)
 }
 
-var upgrader = websocket.Upgrader{
-	ReadBufferSize:  1024,
-	WriteBufferSize: 1024,
-}
-
 // ServeWebSocket handles websocket requests from the peer.
-func ServeWebSocket(websocketService WebsocketService) http.HandlerFunc {
+func ServeWebSocket(upgrader websocket.Upgrader, websocketService WebsocketService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		conn, err := upgrader.Upgrade(w, r, nil)
 		if err != nil {
