@@ -6,6 +6,7 @@ import (
 	"net/http"
 )
 
+// WebsocketService represents abstraction for managing web socket connections
 type WebsocketService interface {
 	HandleNewConnection(connection *websocket.Conn)
 }

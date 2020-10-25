@@ -12,6 +12,13 @@ import (
 	"io"
 )
 
+// Broker socket connection supported types
+const (
+	tcpSocket = "tcp-socket"
+	webSocket = "websocket"
+	all       = "all"
+)
+
 // Broker represents main structure which contains all related fields for routing message
 type Broker struct {
 	workspace  broker.Workspace
@@ -56,18 +63,35 @@ func Init(configFilePath string) (Broker, error) {
 }
 
 // Start init broker tcpServer, creates channels and start receiving and routing of connections
-func (broker Broker) Start() error {
-	err := broker.tcpServer.Start()
-	if err != nil {
-		return err
-	}
-
-	err = broker.httpServer.Start()
+func (broker Broker) Start(connection string) error {
+	err := broker.startByConnectionType(connection)
 	if err != nil {
 		return err
 	}
 
 	broker.run()
+
+	return nil
+}
+
+func (broker Broker) startByConnectionType(connection string) error {
+	switch connection {
+	case tcpSocket:
+		return broker.tcpServer.Start()
+	case webSocket:
+		return broker.httpServer.Start()
+	case all:
+		err := broker.tcpServer.Start()
+		if err != nil {
+			return err
+		}
+		err = broker.httpServer.Start()
+		if err != nil {
+			return err
+		}
+	default:
+		return entity.NotSupportedConnectionType{ConnectionType: connection}
+	}
 
 	return nil
 }

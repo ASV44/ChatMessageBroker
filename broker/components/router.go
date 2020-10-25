@@ -7,6 +7,7 @@ import (
 	"net/http"
 )
 
+// NewRouter creates new instance of router for HTTP server
 func NewRouter(upgrader websocket.Upgrader, websocketService controllers.WebsocketService) *mux.Router {
 	router := mux.NewRouter()
 	addWebSocketRoutes(router, upgrader, websocketService)
@@ -19,7 +20,7 @@ func addWebSocketRoutes(
 	upgrader websocket.Upgrader,
 	websocketService controllers.WebsocketService,
 ) {
-	router.Path("/connect/{id}").
+	router.Path("/websocket-connect").
 		Methods(http.MethodGet, http.MethodOptions).
 		Handler(controllers.ServeWebSocket(upgrader, websocketService)).
 		Name("connect")

@@ -8,11 +8,13 @@ import (
 	"time"
 )
 
+// WebsocketProcessor represents implementation of websocket connection handling logic
 type WebsocketProcessor struct {
 	websocketSettings config.WebsocketConnectionSettings
 	WebSocketConn     chan common.Connection
 }
 
+// NewWebsocketProcessor creates new instance of WebsocketProcessor
 func NewWebsocketProcessor(websocketSettings config.WebsocketConnectionSettings) WebsocketProcessor {
 	return WebsocketProcessor{
 		websocketSettings: websocketSettings,
@@ -20,6 +22,7 @@ func NewWebsocketProcessor(websocketSettings config.WebsocketConnectionSettings)
 	}
 }
 
+// HandleNewConnection process new websocket connection by wrapping it to broker connection abstraction
 func (service WebsocketProcessor) HandleNewConnection(websocketConn *websocket.Conn) {
 	connection := common.NewConnection(websocketConn, NewWebsocketJSONConnIO(websocketConn))
 

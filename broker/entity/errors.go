@@ -64,3 +64,12 @@ type ChannelNotJoined struct {
 func (e ChannelNotJoined) Error() string {
 	return fmt.Sprintf("not subscribed to %s!", e.Name)
 }
+
+// NotSupportedConnectionType is returned when socket connection type provided by launch argument is not supported
+type NotSupportedConnectionType struct {
+	ConnectionType string
+}
+
+func (e NotSupportedConnectionType) Error() string {
+	return fmt.Sprintf("Socket connection type %s not supported!", e.ConnectionType)
+}

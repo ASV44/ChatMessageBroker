@@ -7,7 +7,7 @@ import (
 
 // User represents model with user data received from client in JSON format
 type User struct {
-	ID       int    `json:"id"`
+	ID       int    `json:"ID"`
 	NickName string `json:"nickName"`
 }
 

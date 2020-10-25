@@ -21,12 +21,16 @@ Run `make` in the project root. Start `broker_app` and `client_app`.
 
 ### Run
 #### Broker
-Broker accepts `--config` flag which represents the path to config file. Default value for
-`--config` flag is `./broker/config.yaml`. Modify path to config file only in case you use
+Broker app accepts: 
+- `--config` flag which represents the path to config file. <br> 
+Default value for `--config` flag is `./broker/config.yaml`. Modify path to config file only in case you use
 or change config path location.
+- `--connection` flag which represents socket connection type.<br> Broker supports 
+`tcp-socket` and `websocket` connections. Default flag value is `all` which enables
+all connection types. 
 
 #### Client
-Client app accepts
+Client app accepts:
 - `--host` flag which represents Broker host address. Default value is `0.0.0.0`
 - `--port` flag which represents Broker host address port number. Default value is `8888`
 - `--connection-type` flag which represents Broker connection. Default value is `tcp`

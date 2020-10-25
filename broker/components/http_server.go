@@ -8,7 +8,7 @@ import (
 	"net/http"
 )
 
-// SocketServer represents instance of running server
+// HTTPServer represents instance of running http server
 type HTTPServer struct {
 	instance *http.Server
 }
