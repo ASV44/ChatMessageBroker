@@ -24,6 +24,11 @@ func NewWorkspace(name string) Workspace {
 	return workspace
 }
 
+// Default workspace channels
+const (
+	random = "random"
+)
+
 // RegisterNewUser add new user to workspace and subscribe to default channel
 func (workspace Workspace) RegisterNewUser(registrationData entity.RegistrationData) (entity.User, error) {
 	if _, ok := workspace.users[registrationData.NickName]; ok {
@@ -34,6 +39,7 @@ func (workspace Workspace) RegisterNewUser(registrationData entity.RegistrationD
 		ID:         len(workspace.users),
 		NickName:   registrationData.NickName,
 		Connection: registrationData.Connection,
+		Channels:   []string{random},
 	}
 	workspace.users[user.NickName] = user
 	randomChannel := workspace.channels["random"]
@@ -41,6 +47,12 @@ func (workspace Workspace) RegisterNewUser(registrationData entity.RegistrationD
 	workspace.channels["random"] = randomChannel
 
 	return user, nil
+}
+
+// RemoveUser completely removes user from workspace
+func (workspace Workspace) RemoveUser(user entity.User) {
+	workspace.RemoveUserFromAllChannels(user)
+	delete(workspace.users, user.NickName)
 }
 
 // CreateChannel creates new workspace channel
@@ -89,10 +101,11 @@ func (workspace Workspace) ChannelSubscribers(channel entity.Channel) []string {
 // AddUserToChannel add user to channel or returns error in case if user is already added or channel does not exist
 func (workspace Workspace) AddUserToChannel(user entity.User, name string) error {
 	if channel, exist := workspace.channels[name]; exist {
-		if channel.Contains(user) {
+		if user.IsSubscribedToChannel(name) {
 			return entity.ChannelAlreadyJoined{Name: channel.Name}
 		}
 
+		user.Channels = append(user.Channels, name)
 		channel.Subscribers = append(channel.Subscribers, user)
 		workspace.channels[name] = channel
 	} else {
@@ -102,7 +115,7 @@ func (workspace Workspace) AddUserToChannel(user entity.User, name string) error
 	return nil
 }
 
-// RemoveUserFromChannel remove user from specific channel or returns error in case  channel does not exist
+// RemoveUserFromChannel remove user from specific channel or returns error in case channel does not exist
 func (workspace Workspace) RemoveUserFromChannel(user entity.User, name string) error {
 	if channel, exist := workspace.channels[name]; exist {
 		if isPresent, index := channel.ContainsSubscriber(user); isPresent {
@@ -115,4 +128,11 @@ func (workspace Workspace) RemoveUserFromChannel(user entity.User, name string) 
 	}
 
 	return nil
+}
+
+// RemoveUserFromAllChannels remove user from all subscribed channels
+func (workspace Workspace) RemoveUserFromAllChannels(user entity.User) {
+	for _, channel := range user.Channels {
+		_ = workspace.RemoveUserFromChannel(user, channel)
+	}
 }

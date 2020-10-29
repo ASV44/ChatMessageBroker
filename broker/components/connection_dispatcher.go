@@ -29,7 +29,7 @@ func NewConnectionDispatcher(workspace *Workspace, cmdDispatcher CommandDispatch
 
 // RegisterNewConnection register new incoming client connection by creating and adding new user to workspace
 func (dispatcher ConnectionDispatcher) RegisterNewConnection(connection common.Connection) (entity.User, error) {
-	text := fmt.Sprintf("Welcome to %s workspace!\nEnter nickname:", dispatcher.workspace.name)
+	text := fmt.Sprintf("Welcome to %s workspace!", dispatcher.workspace.name)
 	message := models.Register{Text: text, Time: time.Now()}
 	err := connection.SendMessage(message)
 	if err != nil {
@@ -40,6 +40,23 @@ func (dispatcher ConnectionDispatcher) RegisterNewConnection(connection common.C
 	user, err := dispatcher.registerInWorkspace(connection)
 	if err != nil {
 		fmt.Println("Could not register new user in workspace", err)
+		return user, err
+	}
+
+	err = dispatcher.sendSuccessfulRegistrationMessage(connection)
+	if err != nil {
+		fmt.Println("Could not send successful registration message ", err)
+		dispatcher.workspace.RemoveUser(user)
+
+		return user, err
+	}
+
+	userModel := models.User{ID: user.ID, NickName: user.NickName}
+	err = connection.SendMessage(userModel)
+	if err != nil {
+		fmt.Println("Could not send user account data ", err)
+		dispatcher.workspace.RemoveUser(user)
+
 		return user, err
 	}
 
@@ -73,6 +90,15 @@ func (dispatcher ConnectionDispatcher) registerInWorkspace(connection common.Con
 			}
 		}
 	}
+}
+
+func (dispatcher ConnectionDispatcher) sendSuccessfulRegistrationMessage(connection common.Connection) error {
+	return connection.SendMessage(
+		models.OutgoingMessage{
+			Text: "Successfully registered in workspace",
+			Time: time.Now(),
+		},
+	)
 }
 
 func (dispatcher ConnectionDispatcher) sendRegistrationError(connection common.Connection, err error) error {
