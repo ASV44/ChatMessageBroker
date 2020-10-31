@@ -10,6 +10,7 @@ import (
 	"github.com/ASV44/ChatMessageBroker/common"
 	"github.com/gorilla/websocket"
 	"io"
+	"net"
 )
 
 // Broker socket connection supported types
@@ -101,11 +102,20 @@ func (broker Broker) listenIncomingMessages(user entity.User) {
 	for {
 		err := user.Connection.GetMessage(&message)
 		switch err {
-		case io.EOF:
-			fmt.Println("Disconnected ", user.NickName, user.ID)
+		case io.EOF, io.ErrUnexpectedEOF:
+			fmt.Println("Disconnected ", user.NickName, user.ID, err)
 			return
 		case nil:
 			broker.incoming <- message
+		}
+
+		switch err.(type) {
+		case net.Error:
+			fmt.Println("Lost connection with", user.NickName, user.ID, err)
+			return
+		case *websocket.CloseError:
+			fmt.Println("Closed connection", user.NickName, user.ID, err)
+			return
 		default:
 			fmt.Println("Error at decoding message ", user.NickName, user.ID, err)
 		}

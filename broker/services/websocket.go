@@ -24,7 +24,8 @@ func NewWebsocketProcessor(websocketSettings config.WebsocketConnectionSettings)
 
 // HandleNewConnection process new websocket connection by wrapping it to broker connection abstraction
 func (service WebsocketProcessor) HandleNewConnection(websocketConn *websocket.Conn) {
-	connection := common.NewConnection(websocketConn, NewWebsocketJSONConnIO(websocketConn))
+	connIO := NewWebsocketJSONConnIO(websocketConn, service.websocketSettings.WriteWait)
+	connection := common.NewConnection(websocketConn, connIO)
 
 	websocketConn.SetReadLimit(service.websocketSettings.MaxMessageSize)
 	websocketConn.SetPongHandler(service.pongHandler(websocketConn))

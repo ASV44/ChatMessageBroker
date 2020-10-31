@@ -8,20 +8,20 @@ http_server: # HTTP server used for websocket connection configuration
   address: 0.0.0.0:8080  # HTTP server port number
 
 timeout:
-  shutdown: 15s         # timeout for graceful shutdown, default "15s"
-  read: 10s             # maximum duration for reading the entire request, including the body, default "10s"
-  write: &timeout_write 10s           # maximum duration before timing out writes of the response, default "10s"
+  shutdown: 15s               # timeout for graceful shutdown, default "15s"
+  read: 10s                   # maximum duration for reading the entire request, including the body, default "10s"
+  write: &timeout_write 10s   # maximum duration before timing out writes of the response, default "10s"
 
 websocket:  # Websocket connection configurations
-  read_buffer_size: 1024              # specify I/O read buffer size in bytes. I/O buffer sizes do not limit the size of the messages that can be sent or received.
-  write_buffer_size: 1024             # specify I/O write buffer size in bytes. I/O buffer sizes do not limit the size of the messages that can be sent or received.
-  max_message_size: 512               # Maximum message size allowed from peer.
-  write_wait: *timeout_write          # Time allowed to write a message to the peer.
-  pong_wait: 60s                      # Time allowed to read the next pong message from the peer.
-  ping_period: 54s                    # Send pings to peer with this period. Must be less than pong_wait. Ex. pong_period * 0.9
+  read_buffer_size: 1024      # specify I/O read buffer size in bytes. I/O buffer sizes do not limit the size of the messages that can be sent or received.
+  write_buffer_size: 1024     # specify I/O write buffer size in bytes. I/O buffer sizes do not limit the size of the messages that can be sent or received.
+  max_message_size: 512       # Maximum message size allowed from peer.
+  write_wait: *timeout_write  # Time allowed to write a message to the peer.
+  pong_wait: 60s              # Time allowed to read the next pong message from the peer.
+  ping_period: 54s            # Send pings to peer with this period. Must be less than pong_wait. Ex. pong_period * 0.9
 
 logging:
-  level: debug          # logging level, default "info".
+  level: debug  # logging level, default "info".
 
 http:
-  conn_timeout: 6s      # default timeout for all HTTP clients, default "1s"
+  conn_timeout: 6s  # default timeout for all HTTP clients, default "1s"
