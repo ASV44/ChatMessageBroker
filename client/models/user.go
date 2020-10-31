@@ -2,6 +2,6 @@ package models
 
 // User represents model with user data which will be sent to broker
 type User struct {
-	ID       int    `json:"id"`
+	ID       int    `json:"ID"`
 	NickName string `json:"nickName"`
 }

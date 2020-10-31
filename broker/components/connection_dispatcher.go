@@ -29,25 +29,84 @@ func NewConnectionDispatcher(workspace *Workspace, cmdDispatcher CommandDispatch
 
 // RegisterNewConnection register new incoming client connection by creating and adding new user to workspace
 func (dispatcher ConnectionDispatcher) RegisterNewConnection(connection common.Connection) (entity.User, error) {
-	text := fmt.Sprintf("Welcome to %s workspace!\nEnter nickname:", dispatcher.workspace.name)
-	message := models.Register{UserID: len(dispatcher.workspace.users), Text: text, Time: time.Now()}
+	text := fmt.Sprintf("Welcome to %s workspace!", dispatcher.workspace.name)
+	message := models.Register{Text: text, Time: time.Now()}
 	err := connection.SendMessage(message)
 	if err != nil {
 		fmt.Println("Could not send register data ", err)
 		return entity.User{}, err
 	}
 
-	var user models.User
-	err = connection.GetMessage(&user)
+	user, err := dispatcher.registerInWorkspace(connection)
 	if err != nil {
-		fmt.Println("Could not receive register data from user ", err)
-		return entity.User{}, err
+		fmt.Println("Could not register new user in workspace", err)
+		return user, err
 	}
-	newUser := user.ToUserEntity(connection)
-	dispatcher.workspace.RegisterNewUser(newUser)
+
+	err = dispatcher.sendSuccessfulRegistrationMessage(connection)
+	if err != nil {
+		fmt.Println("Could not send successful registration message ", err)
+		dispatcher.workspace.RemoveUser(user)
+
+		return user, err
+	}
+
+	userModel := models.User{ID: user.ID, NickName: user.NickName}
+	err = connection.SendMessage(userModel)
+	if err != nil {
+		fmt.Println("Could not send user account data ", err)
+		dispatcher.workspace.RemoveUser(user)
+
+		return user, err
+	}
+
 	dispatcher.cmdDispatcher.show(user, All)
 
-	fmt.Printf("Connected user: %s ID: %d addrr: %v\n", newUser.NickName, newUser.ID, connection.RemoteAddr())
+	fmt.Printf("Connected user: %s ID: %d addrr: %v\n", user.NickName, user.ID, connection.RemoteAddr())
 
-	return newUser, nil
+	return user, nil
+}
+
+func (dispatcher ConnectionDispatcher) registerInWorkspace(connection common.Connection) (entity.User, error) {
+	for {
+		var accountData models.AccountData
+		err := connection.GetMessage(&accountData)
+		if err != nil {
+			fmt.Println("Could not receive register data from user ", err)
+			return entity.User{}, err
+		}
+
+		user, err := dispatcher.workspace.RegisterNewUser(
+			entity.RegistrationData{NickName: accountData.NickName, Connection: connection},
+		)
+		switch err.(type) {
+		case nil:
+			return user, nil
+		default:
+			err = dispatcher.sendRegistrationError(connection, err)
+			if err != nil {
+				fmt.Println("Could not send registration error", err)
+				return entity.User{}, err
+			}
+		}
+	}
+}
+
+func (dispatcher ConnectionDispatcher) sendSuccessfulRegistrationMessage(connection common.Connection) error {
+	return connection.SendMessage(
+		models.OutgoingMessage{
+			Text: "Successfully registered in workspace",
+			Time: time.Now(),
+		},
+	)
+}
+
+func (dispatcher ConnectionDispatcher) sendRegistrationError(connection common.Connection, err error) error {
+	return connection.SendMessage(
+		models.OutgoingMessage{
+			Sender: "Error",
+			Text:   err.Error(),
+			Time:   time.Now(),
+		},
+	)
 }

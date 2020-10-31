@@ -59,21 +59,55 @@ func (app App) registerUser(connection common.Connection) (models.User, error) {
 	var registerMessage receiver.Register
 	err := connection.GetMessage(&registerMessage)
 	if err != nil {
+		fmt.Println("Could not decode register message ", err)
+		return models.User{}, err
+	}
+
+	fmt.Println("Connected at: " + registerMessage.Time.Format("15:04:05 2006-01-02"))
+	fmt.Println(registerMessage.Text)
+
+	err = app.registerUserInWorkspace(connection)
+	if err != nil {
+		fmt.Println("Workspace User registration failed", err)
+		return models.User{}, err
+	}
+
+	var user models.User
+	err = connection.GetMessage(&user)
+	if err != nil {
 		fmt.Println("Could not decode user register response ", err)
 		return models.User{}, err
 	}
-	fmt.Println("Connected at: " + registerMessage.Time.Format("15:04:05 2006-01-02"))
-	fmt.Print(registerMessage.Text)
-
-	nickName := app.inputReader.GetUserInput()
-	user := models.User{ID: registerMessage.UserID, NickName: nickName}
-	err = connection.SendMessage(user)
-	if err != nil {
-		fmt.Println("Could not write user register data ", err)
-		return user, err
-	}
 
 	return user, nil
+}
+
+func (app App) registerUserInWorkspace(connection common.Connection) error {
+	for {
+		fmt.Print("Enter nickname: ")
+		nickName := app.inputReader.GetUserInput()
+		accountData := receiver.AccountData{NickName: nickName}
+		err := connection.SendMessage(accountData)
+		if err != nil {
+			fmt.Println("Could not write user register data ", err)
+			return err
+		}
+
+		var registrationMessage receiver.Message
+		err = connection.GetMessage(&registrationMessage)
+		if err != nil {
+			fmt.Println("Could not decode registration message ", err)
+			return err
+		}
+
+		switch registrationMessage.Sender {
+		case "Error":
+			fmt.Printf("%s: %s\n", registrationMessage.Sender, registrationMessage.Text)
+		default:
+			fmt.Println(registrationMessage.Text)
+			return nil
+		}
+	}
 }
 
 // close end connection to broker

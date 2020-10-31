@@ -10,7 +10,7 @@ type Channel struct {
 // Contains check if user is part of specific channel
 func (channel Channel) Contains(user User) bool {
 	for _, subscriber := range channel.Subscribers {
-		if subscriber == user && subscriber.ID == user.ID {
+		if subscriber.NickName == user.NickName && subscriber.ID == user.ID {
 			return true
 		}
 	}
@@ -20,7 +20,7 @@ func (channel Channel) Contains(user User) bool {
 // ContainsSubscriber check if user is part of specific channel and returns index of that user in channel
 func (channel Channel) ContainsSubscriber(user User) (bool, int) {
 	for index, subscriber := range channel.Subscribers {
-		if subscriber == user && subscriber.ID == user.ID {
+		if subscriber.NickName == user.NickName && subscriber.ID == user.ID {
 			return true, index
 		}
 	}

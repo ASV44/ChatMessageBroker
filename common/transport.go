@@ -18,14 +18,10 @@ func NewJSONConnIO(readWriter io.ReadWriter) JSONConnIO {
 
 // SendMessage send JSON message to client connection
 func (conn JSONConnIO) SendMessage(message interface{}) error {
-	err := conn.encoder.Encode(&message)
-
-	return err
+	return conn.encoder.Encode(&message)
 }
 
 // GetMessage get message from client connection
 func (conn JSONConnIO) GetMessage(message interface{}) error {
-	err := conn.decoder.Decode(&message)
-
-	return err
+	return conn.decoder.Decode(&message)
 }

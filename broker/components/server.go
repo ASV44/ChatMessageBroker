@@ -8,16 +8,16 @@ import (
 	"time"
 )
 
-// Server represents instance of running server
-type Server struct {
+// TCPServer represents instance of running server
+type TCPServer struct {
 	Address        string
 	ConnectionType string
 	Connection     chan common.Connection
 }
 
-// InitServer creates and initialize instance of Server
-func InitServer(address string, connectionType string) Server {
-	server := Server{
+// InitServer creates and initialize instance of TCPServer
+func InitServer(address string, connectionType string) TCPServer {
+	server := TCPServer{
 		Address:        address,
 		ConnectionType: connectionType,
 		Connection:     make(chan common.Connection),
@@ -27,7 +27,7 @@ func InitServer(address string, connectionType string) Server {
 }
 
 // Start init and start tcp server and start accepting connections
-func (server Server) Start() error {
+func (server TCPServer) Start() error {
 	listener, err := net.Listen(server.ConnectionType, server.Address)
 	if err != nil {
 		fmt.Println(err)
@@ -41,12 +41,13 @@ func (server Server) Start() error {
 	return nil
 }
 
-func (server Server) run(listener net.Listener) {
+func (server TCPServer) run(listener net.Listener) {
 	defer server.close(listener)
 	server.acceptConnections(listener)
 }
 
-func (server Server) acceptConnections(listener net.Listener) {
+func (server TCPServer) acceptConnections(listener net.Listener) {
+	// connection, err := server.upgrader.Upgrade(w, r, nil)
 	for {
 		rawConnection, err := listener.Accept()
 		if err != nil {
@@ -58,7 +59,7 @@ func (server Server) acceptConnections(listener net.Listener) {
 }
 
 // IsConnectionActive checks if provided connection is still active
-func (server Server) IsConnectionActive(connection net.Conn) bool {
+func (server TCPServer) IsConnectionActive(connection net.Conn) bool {
 	err := connection.SetReadDeadline(time.Now())
 	if err != nil {
 		fmt.Println("Could not set read deadline ", err)
@@ -82,7 +83,7 @@ func (server Server) IsConnectionActive(connection net.Conn) bool {
 }
 
 // close end server listening of new connection
-func (server Server) close(listener net.Listener) {
+func (server TCPServer) close(listener net.Listener) {
 	err := listener.Close()
 	if err != nil {
 		fmt.Println("Could not close server listener ", err)

@@ -36,67 +36,65 @@ func NewCommandDispatcher(workspace *Workspace, transmitter services.Transmitter
 
 // DispatchCommand process incoming command by type and invoke specific method
 func (dispatcher CommandDispatcher) DispatchCommand(message models.IncomingMessage) {
+	user := dispatcher.workspace.users[message.Sender.NickName]
 	switch message.Target {
 	case CreateChannel:
-		dispatcher.createChannel(message.Sender, message.Text)
+		dispatcher.createChannel(user, message.Text)
 	case JoinChannel:
-		dispatcher.joinChannel(message.Sender, message.Text)
+		dispatcher.joinChannel(user, message.Text)
 	case LeaveChannel:
-		dispatcher.leaveChannel(message.Sender, message.Text)
+		dispatcher.leaveChannel(user, message.Text)
 	case Show:
-		dispatcher.show(message.Sender, message.Text)
+		dispatcher.show(user, message.Text)
 	}
 }
 
-func (dispatcher CommandDispatcher) createChannel(sender models.User, name string) {
-	user := dispatcher.workspace.users[sender.NickName]
-	err := dispatcher.workspace.CreateChannel(sender, name)
+func (dispatcher CommandDispatcher) createChannel(user entity.User, name string) {
+	err := dispatcher.workspace.CreateChannel(user, name)
 	if err != nil {
 		dispatcher.SendMessageToUser(user, models.OutgoingMessage{Channel: name, Text: err.Error()})
 		return
 	}
 
-	dispatcher.SendMessageToUser(user, dispatcher.getWorkspaceChannelsMessage())
+	dispatcher.SendMessageToUser(user, dispatcher.workspaceChannelsMessage())
 }
 
-func (dispatcher CommandDispatcher) joinChannel(sender models.User, name string) {
+func (dispatcher CommandDispatcher) joinChannel(sender entity.User, name string) {
 	user := dispatcher.workspace.users[sender.NickName]
 	err := dispatcher.workspace.AddUserToChannel(sender, name)
 	if err != nil {
 		dispatcher.SendMessageToUser(user, models.OutgoingMessage{Channel: name, Text: err.Error()})
 	}
 
-	dispatcher.SendMessageToUser(user, dispatcher.getChannelSubscribersMessage(dispatcher.workspace.channels[name]))
+	dispatcher.SendMessageToUser(user, dispatcher.channelSubscribersMessage(dispatcher.workspace.channels[name]))
 }
 
-func (dispatcher CommandDispatcher) leaveChannel(sender models.User, name string) {
-	user := dispatcher.workspace.users[sender.NickName]
-	err := dispatcher.workspace.RemoveUserFromChannel(sender, name)
+func (dispatcher CommandDispatcher) leaveChannel(user entity.User, name string) {
+	err := dispatcher.workspace.RemoveUserFromChannel(user, name)
 	if err != nil {
 		dispatcher.SendMessageToUser(user, models.OutgoingMessage{Channel: name, Text: err.Error()})
 	}
 
-	dispatcher.SendMessageToUser(user, dispatcher.getChannelSubscribersMessage(dispatcher.workspace.channels[name]))
+	dispatcher.SendMessageToUser(user, dispatcher.channelSubscribersMessage(dispatcher.workspace.channels[name]))
 }
 
-func (dispatcher CommandDispatcher) show(sender models.User, param string) {
-	user := dispatcher.workspace.users[sender.NickName]
+func (dispatcher CommandDispatcher) show(user entity.User, param string) {
 	switch param {
 	case Users:
-		dispatcher.SendMessageToUser(user, dispatcher.getWorkspaceUsersMessage())
+		dispatcher.SendMessageToUser(user, dispatcher.workspaceUsersMessage())
 	case Channels:
-		dispatcher.SendMessageToUser(user, dispatcher.getWorkspaceChannelsMessage())
+		dispatcher.SendMessageToUser(user, dispatcher.workspaceChannelsMessage())
 	case All:
-		dispatcher.SendMessageToUser(user, dispatcher.getWorkspaceChannelsMessage())
-		dispatcher.SendMessageToUser(user, dispatcher.getWorkspaceUsersMessage())
+		dispatcher.SendMessageToUser(user, dispatcher.workspaceChannelsMessage())
+		dispatcher.SendMessageToUser(user, dispatcher.workspaceUsersMessage())
 	default: // Get all users of specific channel if it exist
 		if channel, exist := dispatcher.workspace.channels[param]; exist {
-			dispatcher.SendMessageToUser(user, dispatcher.getChannelSubscribersMessage(channel))
+			dispatcher.SendMessageToUser(user, dispatcher.channelSubscribersMessage(channel))
 		}
 	}
 }
 
-func (dispatcher CommandDispatcher) getWorkspaceChannelsMessage() models.OutgoingMessage {
+func (dispatcher CommandDispatcher) workspaceChannelsMessage() models.OutgoingMessage {
 	return models.OutgoingMessage{
 		Channel: "Channels",
 		Text:    strings.Join(dispatcher.workspace.WorkspaceChannels(), " | "),
@@ -104,7 +102,7 @@ func (dispatcher CommandDispatcher) getWorkspaceChannelsMessage() models.Outgoin
 	}
 }
 
-func (dispatcher CommandDispatcher) getWorkspaceUsersMessage() models.OutgoingMessage {
+func (dispatcher CommandDispatcher) workspaceUsersMessage() models.OutgoingMessage {
 	return models.OutgoingMessage{
 		Sender: "Users",
 		Text:   strings.Join(dispatcher.workspace.WorkspaceUsers(), " | "),
@@ -112,7 +110,7 @@ func (dispatcher CommandDispatcher) getWorkspaceUsersMessage() models.OutgoingMe
 	}
 }
 
-func (dispatcher CommandDispatcher) getChannelSubscribersMessage(channel entity.Channel) models.OutgoingMessage {
+func (dispatcher CommandDispatcher) channelSubscribersMessage(channel entity.Channel) models.OutgoingMessage {
 	return models.OutgoingMessage{
 		Channel: channel.Name,
 		Sender:  "Users",
