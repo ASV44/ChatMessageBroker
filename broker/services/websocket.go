@@ -2,10 +2,12 @@ package services
 
 import (
 	"fmt"
-	"github.com/ASV44/ChatMessageBroker/broker/config"
-	"github.com/ASV44/ChatMessageBroker/common"
-	"github.com/gorilla/websocket"
 	"time"
+
+	"github.com/ASV44/chat-message-broker/common"
+	"github.com/gorilla/websocket"
+
+	"github.com/ASV44/chat-message-broker/broker/config"
 )
 
 // WebsocketProcessor represents implementation of websocket connection handling logic

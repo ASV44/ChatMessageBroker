@@ -2,7 +2,7 @@ package broker
 
 import (
 	"fmt"
-	"github.com/ASV44/ChatMessageBroker/broker/config"
+	"github.com/ASV44/chat-message-broker/broker/config"
 	"github.com/gorilla/mux"
 	"net"
 	"net/http"

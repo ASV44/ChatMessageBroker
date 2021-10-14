@@ -1,7 +1,7 @@
 package broker
 
 import (
-	"github.com/ASV44/ChatMessageBroker/broker/controllers"
+	"github.com/ASV44/chat-message-broker/broker/controllers"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
 	"net/http"

@@ -2,15 +2,16 @@ package client
 
 import (
 	"fmt"
-	"github.com/ASV44/ChatMessageBroker/client/models"
 	"io"
-
-	"github.com/ASV44/ChatMessageBroker/client/components"
 	"strings"
 	"time"
 
-	"github.com/ASV44/ChatMessageBroker/client/models/receiver"
-	"github.com/ASV44/ChatMessageBroker/client/models/sender"
+	"github.com/ASV44/chat-message-broker/client/models"
+
+	"github.com/ASV44/chat-message-broker/client/components"
+
+	"github.com/ASV44/chat-message-broker/client/models/receiver"
+	"github.com/ASV44/chat-message-broker/client/models/sender"
 )
 
 // Client represents instance of client connection to broker

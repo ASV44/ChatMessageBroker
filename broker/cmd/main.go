@@ -3,11 +3,11 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/ASV44/ChatMessageBroker/broker"
-	"github.com/ASV44/ChatMessageBroker/broker/entity"
-
 	"log"
 	"os"
+
+	"github.com/ASV44/chat-message-broker/broker"
+	"github.com/ASV44/chat-message-broker/broker/entity"
 )
 
 func main() {

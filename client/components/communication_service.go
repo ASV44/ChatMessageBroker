@@ -2,9 +2,10 @@ package components
 
 import (
 	"fmt"
-	"github.com/ASV44/ChatMessageBroker/client/models/receiver"
-	"github.com/ASV44/ChatMessageBroker/client/models/sender"
-	"github.com/ASV44/ChatMessageBroker/common"
+
+	"github.com/ASV44/chat-message-broker/client/models/receiver"
+	"github.com/ASV44/chat-message-broker/client/models/sender"
+	"github.com/ASV44/chat-message-broker/common"
 )
 
 // CommunicationService represents abstraction of for performing message communication with broker
