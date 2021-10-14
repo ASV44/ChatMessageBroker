@@ -2,10 +2,11 @@ package broker
 
 import (
 	"fmt"
+	"time"
+
 	"github.com/ASV44/chat-message-broker/broker/entity"
 	"github.com/ASV44/chat-message-broker/broker/models"
 	"github.com/ASV44/chat-message-broker/common"
-	"time"
 )
 
 // ConnectionManager represents abstraction of broker component which process new incoming connection
@@ -79,16 +80,14 @@ func (dispatcher ConnectionDispatcher) registerInWorkspace(connection common.Con
 		user, err := dispatcher.workspace.RegisterNewUser(
 			entity.RegistrationData{NickName: accountData.NickName, Connection: connection},
 		)
-		switch err.(type) {
-		case nil:
-			return user, nil
-		default:
-			err = dispatcher.sendRegistrationError(connection, err)
-			if err != nil {
+		if err != nil {
+			if err = dispatcher.sendRegistrationError(connection, err); err != nil {
 				fmt.Println("Could not send registration error", err)
 				return entity.User{}, err
 			}
 		}
+
+		return user, nil
 	}
 }
 

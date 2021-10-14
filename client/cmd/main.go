@@ -3,8 +3,9 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/ASV44/chat-message-broker/client/app"
 	"os"
+
+	"github.com/ASV44/chat-message-broker/client/app"
 )
 
 func main() {

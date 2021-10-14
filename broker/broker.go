@@ -1,6 +1,7 @@
 package broker
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -104,13 +105,12 @@ func (broker Broker) listenIncomingMessages(user entity.User) {
 	var message models.IncomingMessage
 	for {
 		err := user.Connection.GetMessage(&message)
-		switch err {
-		case io.EOF, io.ErrUnexpectedEOF:
+		if errors.Is(err, io.EOF) || errors.Is(err, io.ErrUnexpectedEOF) {
 			fmt.Println("Disconnected ", user.NickName, user.ID, err)
 			return
-		case nil:
-			broker.incoming <- message
 		}
+
+		broker.incoming <- message
 
 		switch err.(type) {
 		case net.Error:
@@ -150,8 +150,7 @@ func (broker Broker) register(connection common.Connection) {
 }
 
 func (broker Broker) close(connection common.Connection) {
-	err := connection.Close()
-	if err != nil {
+	if err := connection.Close(); err != nil {
 		fmt.Println("Error during closing connection ", err)
 	}
 }

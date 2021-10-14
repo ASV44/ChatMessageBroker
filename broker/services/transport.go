@@ -2,8 +2,9 @@ package services
 
 import (
 	"fmt"
-	"github.com/gorilla/websocket"
 	"time"
+
+	"github.com/gorilla/websocket"
 )
 
 // WebsocketJSONConnIO represents websocket abstraction of JSON connection communication

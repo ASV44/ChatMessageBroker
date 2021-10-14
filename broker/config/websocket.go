@@ -1,8 +1,9 @@
 package config
 
 import (
-	"github.com/mitchellh/mapstructure"
 	"time"
+
+	"github.com/mitchellh/mapstructure"
 )
 
 // WebsocketConnectionSettings contains websocket related config parameters

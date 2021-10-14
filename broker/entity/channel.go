@@ -14,6 +14,7 @@ func (channel Channel) Contains(user User) bool {
 			return true
 		}
 	}
+
 	return false
 }
 
@@ -24,5 +25,6 @@ func (channel Channel) ContainsSubscriber(user User) (bool, int) {
 			return true, index
 		}
 	}
+
 	return false, -1
 }

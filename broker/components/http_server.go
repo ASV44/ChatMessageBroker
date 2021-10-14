@@ -2,10 +2,12 @@ package broker
 
 import (
 	"fmt"
-	"github.com/ASV44/chat-message-broker/broker/config"
-	"github.com/gorilla/mux"
 	"net"
 	"net/http"
+
+	"github.com/gorilla/mux"
+
+	"github.com/ASV44/chat-message-broker/broker/config"
 )
 
 // HTTPServer represents instance of running http server

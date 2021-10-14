@@ -1,10 +1,12 @@
 package broker
 
 import (
-	"github.com/ASV44/chat-message-broker/broker/controllers"
+	"net/http"
+
 	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
-	"net/http"
+
+	"github.com/ASV44/chat-message-broker/broker/controllers"
 )
 
 // NewRouter creates new instance of router for HTTP server

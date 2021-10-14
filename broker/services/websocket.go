@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/ASV44/chat-message-broker/common"
 	"github.com/gorilla/websocket"
+
+	"github.com/ASV44/chat-message-broker/common"
 
 	"github.com/ASV44/chat-message-broker/broker/config"
 )
@@ -50,25 +51,21 @@ func (service WebsocketProcessor) pongHandler(conn *websocket.Conn) func(string)
 func (service WebsocketProcessor) ping(conn *websocket.Conn) {
 	ticker := time.NewTicker(service.websocketSettings.PingPeriod)
 	defer service.dispose(conn, ticker)
-	for {
-		select {
-		case <-ticker.C:
-			err := conn.SetWriteDeadline(time.Now().Add(service.websocketSettings.WriteWait))
-			if err != nil {
-				fmt.Println("Websocket ping error at setting write deadline", err)
-			}
+	for range ticker.C {
+		err := conn.SetWriteDeadline(time.Now().Add(service.websocketSettings.WriteWait))
+		if err != nil {
+			fmt.Println("Websocket ping error at setting write deadline", err)
+		}
 
-			if err = conn.WriteMessage(websocket.PingMessage, nil); err != nil {
-				fmt.Println("Websocket ping error at writing ping message", err)
-			}
+		if err = conn.WriteMessage(websocket.PingMessage, nil); err != nil {
+			fmt.Println("Websocket ping error at writing ping message", err)
 		}
 	}
 }
 
 func (service WebsocketProcessor) dispose(conn *websocket.Conn, ticker *time.Ticker) {
 	ticker.Stop()
-	err := conn.Close()
-	if err != nil {
+	if err := conn.Close(); err != nil {
 		fmt.Println("Websocket ping error at closing connection", err)
 	}
 }

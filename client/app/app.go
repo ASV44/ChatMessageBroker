@@ -113,8 +113,7 @@ func (app App) registerUserInWorkspace(connection common.Connection) error {
 
 // close end connection to broker
 func (app App) close(connection common.Connection) {
-	err := connection.Close()
-	if err != nil {
+	if err := connection.Close(); err != nil {
 		fmt.Println("Could not close client connection ", err)
 	}
 }

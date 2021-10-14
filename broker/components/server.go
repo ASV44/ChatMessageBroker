@@ -1,11 +1,13 @@
 package broker
 
 import (
+	"errors"
 	"fmt"
-	"github.com/ASV44/chat-message-broker/common"
 	"io"
 	"net"
 	"time"
+
+	"github.com/ASV44/chat-message-broker/common"
 )
 
 // TCPServer represents instance of running server
@@ -67,7 +69,7 @@ func (server TCPServer) IsConnectionActive(connection net.Conn) bool {
 
 	var isConnected bool
 	var one []byte
-	if _, err := connection.Read(one); err == io.EOF {
+	if _, err := connection.Read(one); errors.Is(err, io.EOF) {
 		isConnected = false
 	} else {
 		var zero time.Time
@@ -84,8 +86,7 @@ func (server TCPServer) IsConnectionActive(connection net.Conn) bool {
 
 // close end server listening of new connection
 func (server TCPServer) close(listener net.Listener) {
-	err := listener.Close()
-	if err != nil {
+	if err := listener.Close(); err != nil {
 		fmt.Println("Could not close server listener ", err)
 	}
 }

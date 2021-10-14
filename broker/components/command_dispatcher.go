@@ -1,11 +1,12 @@
 package broker
 
 import (
+	"strings"
+	"time"
+
 	"github.com/ASV44/chat-message-broker/broker/entity"
 	"github.com/ASV44/chat-message-broker/broker/models"
 	"github.com/ASV44/chat-message-broker/broker/services"
-	"strings"
-	"time"
 )
 
 // Available commands

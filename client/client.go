@@ -1,6 +1,7 @@
 package client
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -39,15 +40,17 @@ func (client Client) Start() {
 func (client Client) listenConnection() {
 	for {
 		message, err := client.commService.GetMessage()
-		switch err {
-		case io.EOF:
-			fmt.Println("Connection closed by server ", err)
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				fmt.Println("Connection closed by server ", err)
+			} else {
+				fmt.Println("Error at decoding message ", err)
+			}
+
 			return
-		case nil:
-			client.showReceivedMessage(message)
-		default:
-			fmt.Println("Error at decoding message ", err)
 		}
+
+		client.showReceivedMessage(message)
 	}
 }
 

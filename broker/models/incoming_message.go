@@ -24,6 +24,11 @@ func (incoming IncomingMessage) ToOutgoingMessage() OutgoingMessage {
 	if incoming.Type == CHANNEL {
 		channel = incoming.Target
 	}
-	return OutgoingMessage{Channel: channel, Sender: incoming.Sender.NickName,
-		Text: incoming.Text, Time: incoming.Time}
+
+	return OutgoingMessage{
+		Channel: channel,
+		Sender:  incoming.Sender.NickName,
+		Text:    incoming.Text,
+		Time:    incoming.Time,
+	}
 }
