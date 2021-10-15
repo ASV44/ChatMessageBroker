@@ -2,12 +2,13 @@ package app
 
 import (
 	"fmt"
-	"github.com/ASV44/ChatMessageBroker/client"
-	"github.com/ASV44/ChatMessageBroker/client/components"
-	"github.com/ASV44/ChatMessageBroker/client/models"
-	"github.com/ASV44/ChatMessageBroker/client/models/receiver"
-	"github.com/ASV44/ChatMessageBroker/common"
 	"net"
+
+	"github.com/ASV44/chat-message-broker/client"
+	"github.com/ASV44/chat-message-broker/client/components"
+	"github.com/ASV44/chat-message-broker/client/models"
+	"github.com/ASV44/chat-message-broker/client/models/receiver"
+	"github.com/ASV44/chat-message-broker/common"
 )
 
 // App represents instance of the client app
@@ -112,8 +113,7 @@ func (app App) registerUserInWorkspace(connection common.Connection) error {
 
 // close end connection to broker
 func (app App) close(connection common.Connection) {
-	err := connection.Close()
-	if err != nil {
+	if err := connection.Close(); err != nil {
 		fmt.Println("Could not close client connection ", err)
 	}
 }

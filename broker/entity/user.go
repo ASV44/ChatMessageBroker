@@ -1,7 +1,7 @@
 package entity
 
 import (
-	"github.com/ASV44/ChatMessageBroker/common"
+	"github.com/ASV44/chat-message-broker/common"
 )
 
 // User represents entity of broker user

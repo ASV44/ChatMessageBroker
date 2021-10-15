@@ -2,8 +2,9 @@ package controllers
 
 import (
 	"fmt"
-	"github.com/gorilla/websocket"
 	"net/http"
+
+	"github.com/gorilla/websocket"
 )
 
 // WebsocketService represents abstraction for managing web socket connections

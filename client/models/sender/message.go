@@ -3,7 +3,7 @@ package sender
 import (
 	"time"
 
-	"github.com/ASV44/ChatMessageBroker/client/models"
+	"github.com/ASV44/chat-message-broker/client/models"
 )
 
 // Constant values of message types

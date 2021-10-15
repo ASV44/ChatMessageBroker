@@ -5,14 +5,12 @@ Project includes both server (broker) and client apps.
 
 ## Install
 
-Clone repo in `$GOPATH`/src/github.com/ASV44/ folder.
+Clone repo in to your machine and run `go mod download`
 
 ### Broker
 Change directory to broker folder which is the main directory for broker app.
 
-Run `dep ensure`
-
-Check config yaml file in for adopting all available broker configuration.
+Check config yaml file for adopting all available broker configuration.
 
 ### Build
 You should have working setup of GO  environment.

@@ -1,7 +1,7 @@
 package broker
 
 import (
-	"github.com/ASV44/ChatMessageBroker/broker/entity"
+	"github.com/ASV44/chat-message-broker/broker/entity"
 )
 
 // Workspace represents broker component which define users common workspace.

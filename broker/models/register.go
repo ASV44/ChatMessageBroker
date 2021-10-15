@@ -1,9 +1,11 @@
 package models
 
 import (
-	"github.com/ASV44/ChatMessageBroker/broker/entity"
-	"github.com/ASV44/ChatMessageBroker/common"
 	"time"
+
+	"github.com/ASV44/chat-message-broker/common"
+
+	"github.com/ASV44/chat-message-broker/broker/entity"
 )
 
 // Register represents model of message which is sent to user at connection for register
