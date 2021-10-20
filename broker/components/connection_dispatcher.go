@@ -39,6 +39,7 @@ func (dispatcher ConnectionDispatcher) RegisterNewConnection(connection common.C
 	}
 
 	user, err := dispatcher.registerInWorkspace(connection)
+	fmt.Println("###########", user, err)
 	if err != nil {
 		fmt.Println("Could not register new user in workspace", err)
 		return user, err
@@ -80,14 +81,15 @@ func (dispatcher ConnectionDispatcher) registerInWorkspace(connection common.Con
 		user, err := dispatcher.workspace.RegisterNewUser(
 			entity.RegistrationData{NickName: accountData.NickName, Connection: connection},
 		)
-		if err != nil {
+		switch err.(type) {
+		case nil:
+			return user, nil
+		default:
 			if err = dispatcher.sendRegistrationError(connection, err); err != nil {
 				fmt.Println("Could not send registration error", err)
 				return entity.User{}, err
 			}
 		}
-
-		return user, nil
 	}
 }
 

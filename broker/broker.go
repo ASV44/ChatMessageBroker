@@ -110,15 +110,13 @@ func (broker Broker) listenIncomingMessages(user entity.User) {
 			return
 		}
 
-		broker.incoming <- message
-
 		switch err.(type) {
 		case net.Error:
 			fmt.Println("Lost connection with", user.NickName, user.ID, err)
-			return
 		case *websocket.CloseError:
 			fmt.Println("Closed connection", user.NickName, user.ID, err)
-			return
+		case nil:
+			broker.incoming <- message
 		default:
 			fmt.Println("Error at decoding message ", user.NickName, user.ID, err)
 		}
