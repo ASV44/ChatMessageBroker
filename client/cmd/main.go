@@ -16,8 +16,7 @@ func main() {
 
 	application := app.Init(*host, *port, *connectionType)
 
-	err := application.Start()
-	if err != nil {
+	if err := application.Start(); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
