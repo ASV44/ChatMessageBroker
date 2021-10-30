@@ -31,15 +31,12 @@ const (
 
 // RegisterNewUser add new user to workspace and subscribe to default channel
 func (workspace Workspace) RegisterNewUser(registrationData entity.RegistrationData) (entity.User, error) {
-	if _, ok := workspace.users[registrationData.NickName]; ok {
-		return entity.User{}, entity.UserNameAlreadyExist{Name: registrationData.NickName}
-	}
-
 	user := entity.User{
-		ID:         len(workspace.users),
-		NickName:   registrationData.NickName,
-		Connection: registrationData.Connection,
-		Channels:   []string{random},
+		ID:           len(workspace.users),
+		NickName:     registrationData.NickName,
+		PasswordHash: registrationData.PasswordHash,
+		Connection:   registrationData.Connection,
+		Channels:     []string{random},
 	}
 	workspace.users[user.NickName] = user
 	randomChannel := workspace.channels["random"]

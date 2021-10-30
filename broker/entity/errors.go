@@ -29,13 +29,13 @@ func (e WebsocketConfigDecodingFailed) Error() string {
 	return fmt.Sprintf("Decode of websocket config failed: %s", e.Message)
 }
 
-// UserNameAlreadyExist is returned when new user tries to register with already registered nickname in workpsace
-type UserNameAlreadyExist struct {
+// UserWrongPassword is returned when new connection tries to sign in with existing username but wrong password is provided
+type UserWrongPassword struct {
 	Name string
 }
 
-func (e UserNameAlreadyExist) Error() string {
-	return fmt.Sprintf("%s user name already exist", e.Name)
+func (e UserWrongPassword) Error() string {
+	return fmt.Sprintf("Wrong password for existing user %s", e.Name)
 }
 
 // ChannelAlreadyExist is returned when user wants to create channel with name which already exist

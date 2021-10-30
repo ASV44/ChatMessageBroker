@@ -9,6 +9,7 @@ require (
 	github.com/gorilla/websocket v1.4.2
 	github.com/mitchellh/mapstructure v1.4.2
 	github.com/spf13/viper v1.9.0
+	golang.org/x/crypto v0.0.0-20210817164053-32db794688a5
 )
 
 require (
