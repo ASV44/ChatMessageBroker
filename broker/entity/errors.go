@@ -91,3 +91,12 @@ type AuthServiceInitFailed struct {
 func (e AuthServiceInitFailed) Error() string {
 	return fmt.Sprintf("Failed to create Auth service: %s", e.ErrorMessage)
 }
+
+// TokenDecodingFailed is returned when JWT token has not expected signing method algorithm value encoded in token
+type TokenDecodingFailed struct {
+	Message string
+}
+
+func (e TokenDecodingFailed) Error() string {
+	return fmt.Sprintf("Failed to decode auth token: %s", e.Message)
+}

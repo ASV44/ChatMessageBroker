@@ -78,13 +78,22 @@ func Init(configFilePath string) (Broker, error) {
 		fmt.Println("JWT token", jwtToken)
 	}
 
+	token, claims, err := authProvider.DecodeToken(jwtToken)
+	if err != nil {
+		fmt.Println("Failed to decode token", err)
+	} else {
+		fmt.Println("Token:", token)
+		fmt.Println("Claims:", claims)
+	}
+
 	return Broker{
-		workspace:  workspace,
-		tcpServer:  broker.InitServer(configManager.TCPAddress(), configManager.TCPServerConnectionType()),
-		httpServer: broker.InitHTTPServer(configManager, broker.NewRouter(upgrader, websocketService)),
-		incoming:   make(chan models.IncomingMessage),
-		dispatcher: broker.NewDispatcher(&workspace, connDispatcher, cmdDispatcher, transmitter),
-		websocket:  websocketService,
+		workspace:    workspace,
+		tcpServer:    broker.InitServer(configManager.TCPAddress(), configManager.TCPServerConnectionType()),
+		httpServer:   broker.InitHTTPServer(configManager, broker.NewRouter(upgrader, websocketService)),
+		incoming:     make(chan models.IncomingMessage),
+		dispatcher:   broker.NewDispatcher(&workspace, connDispatcher, cmdDispatcher, transmitter),
+		websocket:    websocketService,
+		authProvider: authProvider,
 	}, nil
 }
 
