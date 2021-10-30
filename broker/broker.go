@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"time"
 
+	"github.com/golang-jwt/jwt/v4"
 	"github.com/gorilla/websocket"
 
 	"github.com/ASV44/chat-message-broker/common"
@@ -26,12 +28,13 @@ const (
 
 // Broker represents main structure which contains all related fields for routing message
 type Broker struct {
-	workspace  broker.Workspace
-	tcpServer  broker.TCPServer
-	httpServer broker.HTTPServer
-	incoming   chan models.IncomingMessage
-	dispatcher broker.Dispatcher
-	websocket  services.WebsocketProcessor
+	workspace    broker.Workspace
+	tcpServer    broker.TCPServer
+	httpServer   broker.HTTPServer
+	incoming     chan models.IncomingMessage
+	dispatcher   broker.Dispatcher
+	websocket    services.WebsocketProcessor
+	authProvider services.AuthProvider
 }
 
 // Init creates and initialize Broker instance
@@ -46,6 +49,11 @@ func Init(configFilePath string) (Broker, error) {
 		return Broker{}, entity.WebsocketConfigDecodingFailed{Message: err.Error()}
 	}
 
+	authProvider, err := services.NewAuthService()
+	if err != nil {
+		return Broker{}, entity.AuthServiceInitFailed{ErrorMessage: err.Error()}
+	}
+
 	workspace := broker.NewWorkspace(configManager.Workspace())
 	transmitter := services.NewCommunicationManager()
 	cmdDispatcher := broker.NewCommandDispatcher(&workspace, transmitter)
@@ -55,6 +63,19 @@ func Init(configFilePath string) (Broker, error) {
 	upgrader := websocket.Upgrader{
 		ReadBufferSize:  websocketConfig.ReadBufferSize,
 		WriteBufferSize: websocketConfig.WriteBufferSize,
+	}
+
+	claims := jwt.RegisteredClaims{
+		Issuer:    configManager.Workspace(),
+		Subject:   "test-subject",
+		ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour * 12)),
+		IssuedAt:  jwt.NewNumericDate(time.Now()),
+	}
+	jwtToken, err := authProvider.GenerateNewJWT(&claims)
+	if err != nil {
+		fmt.Println("Error creating token", err)
+	} else {
+		fmt.Println("JWT token", jwtToken)
 	}
 
 	return Broker{
