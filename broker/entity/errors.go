@@ -100,3 +100,13 @@ type TokenDecodingFailed struct {
 func (e TokenDecodingFailed) Error() string {
 	return fmt.Sprintf("Failed to decode auth token: %s", e.Message)
 }
+
+// InvalidToken is returned when received message from client contains invalid auth token
+// which does not belong to user or is expired
+type InvalidToken struct {
+	Reason string
+}
+
+func (e InvalidToken) Error() string {
+	return fmt.Sprintf("Received message with invalid auth token: %s", e.Reason)
+}

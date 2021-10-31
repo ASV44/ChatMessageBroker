@@ -2,6 +2,7 @@ package broker
 
 import (
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/ASV44/chat-message-broker/broker/entity"
@@ -20,6 +21,7 @@ type ConnectionDispatcher struct {
 	workspace     *Workspace
 	cmdDispatcher CommandDispatcher
 	hashing       services.PasswordHashing
+	auth          services.AuthProvider
 }
 
 // NewConnectionDispatcher creates new instance of ConnectionDispatcher
@@ -27,11 +29,13 @@ func NewConnectionDispatcher(
 	workspace *Workspace,
 	cmdDispatcher CommandDispatcher,
 	hashing services.PasswordHashing,
+	auth services.AuthProvider,
 ) ConnectionDispatcher {
 	return ConnectionDispatcher{
 		workspace:     workspace,
 		cmdDispatcher: cmdDispatcher,
 		hashing:       hashing,
+		auth:          auth,
 	}
 }
 
@@ -60,7 +64,12 @@ func (dispatcher ConnectionDispatcher) RegisterNewConnection(connection common.C
 		return user, err
 	}
 
-	userModel := models.User{ID: user.ID, NickName: user.NickName}
+	jwt, err := dispatcher.auth.GenerateNewUserJWT(
+		strconv.Itoa(user.ID),
+		connection.NetworkConnection.RemoteAddr().String(),
+	)
+
+	userModel := models.User{ID: user.ID, NickName: user.NickName, Auth: jwt}
 	err = connection.SendMessage(userModel)
 	if err != nil {
 		fmt.Println("Could not send user account data ", err)
