@@ -89,6 +89,7 @@ func (app App) registerUserInWorkspace(connection common.Connection) error {
 		nickName := app.inputReader.GetUserInput()
 		fmt.Print("Enter password: ")
 		password := app.inputReader.GetUserSecretInput()
+		fmt.Println() // New line after providing password
 		accountData := receiver.AccountData{NickName: nickName, Password: password}
 		err := connection.SendMessage(accountData)
 		if err != nil {

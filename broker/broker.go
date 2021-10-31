@@ -58,7 +58,7 @@ func Init(configFilePath string) (Broker, error) {
 
 	workspace := broker.NewWorkspace(configManager.Workspace())
 	transmitter := services.NewCommunicationManager()
-	cmdDispatcher := broker.NewCommandDispatcher(&workspace, transmitter)
+	cmdDispatcher := broker.NewCommandDispatcher(&workspace, authProvider, transmitter)
 	connDispatcher := broker.NewConnectionDispatcher(&workspace, cmdDispatcher, passwordHashing, authProvider)
 
 	websocketService := services.NewWebsocketProcessor(websocketConfig)
@@ -149,7 +149,7 @@ func (broker Broker) listenIncomingMessages(user entity.User) {
 func (broker Broker) validateMessageSenderAuth(sender models.User, clientAddr string) error {
 	_, claims, err := broker.authProvider.DecodeToken(sender.Auth)
 	if err != nil {
-		return err
+		return entity.InvalidToken{Reason: err.Error()}
 	}
 
 	if err = claims.Valid(); err != nil {

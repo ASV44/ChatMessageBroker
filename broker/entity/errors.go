@@ -111,11 +111,20 @@ func (e InvalidToken) Error() string {
 	return fmt.Sprintf("Received message with invalid auth token: %s", e.Reason)
 }
 
-// UserAuthFailed is returned when user authentication process failed at one step
+// UserAuthFailed is returned when user authentication process failed at some step
 type UserAuthFailed struct {
 	Reason string
 }
 
 func (e UserAuthFailed) Error() string {
 	return fmt.Sprintf("User authentication failed: %s", e.Reason)
+}
+
+// UserAuthRenewFailed is returned when user authentication renew process failed
+type UserAuthRenewFailed struct {
+	Reason string
+}
+
+func (e UserAuthRenewFailed) Error() string {
+	return fmt.Sprintf("Failed to renew user authentication: %s", e.Reason)
 }

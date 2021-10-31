@@ -1,6 +1,7 @@
 package broker
 
 import (
+	"strconv"
 	"strings"
 	"time"
 
@@ -15,6 +16,7 @@ const (
 	JoinChannel   = "join"
 	LeaveChannel  = "leave"
 	Show          = "show"
+	Renew         = "renew"
 )
 
 // Show command options
@@ -27,12 +29,13 @@ const (
 // CommandDispatcher represents broker component which process new incoming command from client
 type CommandDispatcher struct {
 	workspace *Workspace
+	auth      services.AuthProvider
 	services.Transmitter
 }
 
 // NewCommandDispatcher creates new instance of CommandDispatcher
-func NewCommandDispatcher(workspace *Workspace, transmitter services.Transmitter) CommandDispatcher {
-	return CommandDispatcher{workspace: workspace, Transmitter: transmitter}
+func NewCommandDispatcher(workspace *Workspace, auth services.AuthProvider, transmitter services.Transmitter) CommandDispatcher {
+	return CommandDispatcher{workspace: workspace, auth: auth, Transmitter: transmitter}
 }
 
 // DispatchCommand process incoming command by type and invoke specific method
@@ -47,6 +50,8 @@ func (dispatcher CommandDispatcher) DispatchCommand(message models.IncomingMessa
 		dispatcher.leaveChannel(user, message.Text)
 	case Show:
 		dispatcher.show(user, message.Text)
+	case Renew:
+		dispatcher.renewUserAuth(user)
 	}
 }
 
@@ -93,6 +98,23 @@ func (dispatcher CommandDispatcher) show(user entity.User, param string) {
 			dispatcher.SendMessageToUser(user, dispatcher.channelSubscribersMessage(channel))
 		}
 	}
+}
+
+func (dispatcher CommandDispatcher) renewUserAuth(user entity.User) {
+	newJwt, err := dispatcher.auth.GenerateNewUserJWT(strconv.Itoa(user.ID), user.Connection.RemoteAddr().String())
+	if err != nil {
+		dispatcher.SendMessageToUser(user, models.OutgoingMessage{
+			Sender: "Error",
+			Text:   entity.UserAuthRenewFailed{Reason: err.Error()}.Error(),
+			Time:   time.Now(),
+		})
+	}
+
+	dispatcher.SendMessageToUser(user, models.OutgoingMessage{
+		Sender: "Renew",
+		Text:   newJwt,
+		Time:   time.Now(),
+	})
 }
 
 func (dispatcher CommandDispatcher) workspaceChannelsMessage() models.OutgoingMessage {
