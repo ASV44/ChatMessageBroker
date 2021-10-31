@@ -87,7 +87,10 @@ func (app App) registerUserInWorkspace(connection common.Connection) error {
 	for {
 		fmt.Print("Enter nickname: ")
 		nickName := app.inputReader.GetUserInput()
-		accountData := receiver.AccountData{NickName: nickName}
+		fmt.Print("Enter password: ")
+		password := app.inputReader.GetUserSecretInput()
+		fmt.Println() // New line after providing password
+		accountData := receiver.AccountData{NickName: nickName, Password: password}
 		err := connection.SendMessage(accountData)
 		if err != nil {
 			fmt.Println("Could not write user register data ", err)
