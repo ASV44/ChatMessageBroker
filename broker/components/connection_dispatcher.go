@@ -50,9 +50,17 @@ func (dispatcher ConnectionDispatcher) RegisterNewConnection(connection common.C
 	}
 
 	user, err := dispatcher.registerInWorkspace(connection)
-	fmt.Println("###########", user, err)
 	if err != nil {
 		fmt.Println("Could not register new user in workspace", err)
+		return user, err
+	}
+
+	jwt, err := dispatcher.auth.GenerateNewUserJWT(
+		strconv.Itoa(user.ID),
+		connection.NetworkConnection.RemoteAddr().String(),
+	)
+	if err != nil {
+		fmt.Println("User authentication failed to create auth token", err)
 		return user, err
 	}
 
@@ -63,11 +71,6 @@ func (dispatcher ConnectionDispatcher) RegisterNewConnection(connection common.C
 
 		return user, err
 	}
-
-	jwt, err := dispatcher.auth.GenerateNewUserJWT(
-		strconv.Itoa(user.ID),
-		connection.NetworkConnection.RemoteAddr().String(),
-	)
 
 	userModel := models.User{ID: user.ID, NickName: user.NickName, Auth: jwt}
 	err = connection.SendMessage(userModel)
@@ -94,22 +97,7 @@ func (dispatcher ConnectionDispatcher) registerInWorkspace(connection common.Con
 			return entity.User{}, err
 		}
 
-		if user, ok := dispatcher.workspace.users[accountData.NickName]; ok {
-			return dispatcher.signInExistingUserInWorkspace(user, accountData, connection)
-		}
-
-		passwordHash, err := dispatcher.hashing.HashPassword(accountData.Password)
-		if err != nil {
-			fmt.Println("User password hashing failed", err)
-		}
-
-		user, err := dispatcher.workspace.RegisterNewUser(
-			entity.RegistrationData{
-				NickName:     accountData.NickName,
-				PasswordHash: passwordHash,
-				Connection:   connection,
-			},
-		)
+		user, err := dispatcher.registerUser(connection, accountData)
 		switch err.(type) {
 		case nil:
 			return user, nil
@@ -122,18 +110,41 @@ func (dispatcher ConnectionDispatcher) registerInWorkspace(connection common.Con
 	}
 }
 
+func (dispatcher ConnectionDispatcher) registerUser(
+	connection common.Connection,
+	accountData models.AccountData,
+) (entity.User, error) {
+	if user, ok := dispatcher.workspace.users[accountData.NickName]; ok {
+		return dispatcher.signInExistingUserInWorkspace(user, accountData, connection)
+	}
+
+	if accountData.Password == "" {
+		return entity.User{}, entity.UserAuthFailed{Reason: "Empty password"}
+	}
+
+	passwordHash, err := dispatcher.hashing.HashPassword(accountData.Password)
+	if err != nil {
+		fmt.Println("User password hashing failed", err)
+	}
+
+	return dispatcher.workspace.RegisterNewUser(
+		entity.RegistrationData{
+			NickName:     accountData.NickName,
+			PasswordHash: passwordHash,
+			Connection:   connection,
+		},
+	)
+}
+
 func (dispatcher ConnectionDispatcher) signInExistingUserInWorkspace(
 	user entity.User,
 	accountData models.AccountData,
 	connection common.Connection,
 ) (entity.User, error) {
 	if err := dispatcher.hashing.CompareHashAndPassword(user.PasswordHash, accountData.Password); err != nil {
-		if err = dispatcher.sendRegistrationError(connection, err); err != nil {
-			fmt.Println("Could not send registration error", err)
-		}
-
-		return entity.User{}, err
+		return entity.User{}, entity.UserAuthFailed{Reason: err.Error()}
 	}
+
 	user.Connection = connection
 	dispatcher.workspace.users[user.NickName] = user
 

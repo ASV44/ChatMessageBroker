@@ -11,4 +11,5 @@ type Register struct {
 // AccountData represents model of message which is sent from user with all account data required at sign up
 type AccountData struct {
 	NickName string `json:"nickName"`
+	Password string `json:"password"`
 }
