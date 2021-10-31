@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"strconv"
 	"time"
 
-	"github.com/golang-jwt/jwt/v4"
 	"github.com/gorilla/websocket"
 
 	"github.com/ASV44/chat-message-broker/common"
@@ -49,15 +49,17 @@ func Init(configFilePath string) (Broker, error) {
 		return Broker{}, entity.WebsocketConfigDecodingFailed{Message: err.Error()}
 	}
 
-	authProvider, err := services.NewAuthService()
+	authProvider, err := services.NewAuthService(configManager.Workspace())
 	if err != nil {
 		return Broker{}, entity.AuthServiceInitFailed{ErrorMessage: err.Error()}
 	}
 
+	passwordHashing := services.NewLocalPasswordHashing()
+
 	workspace := broker.NewWorkspace(configManager.Workspace())
 	transmitter := services.NewCommunicationManager()
 	cmdDispatcher := broker.NewCommandDispatcher(&workspace, transmitter)
-	connDispatcher := broker.NewConnectionDispatcher(&workspace, cmdDispatcher)
+	connDispatcher := broker.NewConnectionDispatcher(&workspace, cmdDispatcher, passwordHashing, authProvider)
 
 	websocketService := services.NewWebsocketProcessor(websocketConfig)
 	upgrader := websocket.Upgrader{
@@ -65,33 +67,12 @@ func Init(configFilePath string) (Broker, error) {
 		WriteBufferSize: websocketConfig.WriteBufferSize,
 	}
 
-	claims := jwt.RegisteredClaims{
-		Issuer:    configManager.Workspace(),
-		Subject:   "test-subject",
-		ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour * 12)),
-		IssuedAt:  jwt.NewNumericDate(time.Now()),
-	}
-	jwtToken, err := authProvider.GenerateNewJWT(&claims)
-	if err != nil {
-		fmt.Println("Error creating token", err)
-	} else {
-		fmt.Println("JWT token", jwtToken)
-	}
-
-	token, claims, err := authProvider.DecodeToken(jwtToken)
-	if err != nil {
-		fmt.Println("Failed to decode token", err)
-	} else {
-		fmt.Println("Token:", token)
-		fmt.Println("Claims:", claims)
-	}
-
 	return Broker{
 		workspace:    workspace,
 		tcpServer:    broker.InitServer(configManager.TCPAddress(), configManager.TCPServerConnectionType()),
 		httpServer:   broker.InitHTTPServer(configManager, broker.NewRouter(upgrader, websocketService)),
 		incoming:     make(chan models.IncomingMessage),
-		dispatcher:   broker.NewDispatcher(&workspace, connDispatcher, cmdDispatcher, transmitter),
+		dispatcher:   broker.NewDispatcher(&workspace, connDispatcher, cmdDispatcher),
 		websocket:    websocketService,
 		authProvider: authProvider,
 	}, nil
@@ -140,17 +121,50 @@ func (broker Broker) listenIncomingMessages(user entity.User) {
 			return
 		}
 
+		if err != nil {
+			switch err.(type) {
+			case net.Error:
+				fmt.Println("Lost connection with", user.NickName, user.ID, err)
+			case *websocket.CloseError:
+				fmt.Println("Closed connection", user.NickName, user.ID, err)
+			default:
+				fmt.Println("Error at decoding message ", user.NickName, user.ID, err)
+			}
+		}
+
+		err = broker.validateMessageSenderAuth(message.Sender, user.Connection.RemoteAddr().String())
 		switch err.(type) {
-		case net.Error:
-			fmt.Println("Lost connection with", user.NickName, user.ID, err)
-		case *websocket.CloseError:
-			fmt.Println("Closed connection", user.NickName, user.ID, err)
 		case nil:
 			broker.incoming <- message
 		default:
-			fmt.Println("Error at decoding message ", user.NickName, user.ID, err)
+			broker.dispatcher.SendMessageToUser(user, models.OutgoingMessage{
+				Sender: "Error",
+				Text:   err.Error(),
+				Time:   time.Now(),
+			})
 		}
 	}
+}
+
+func (broker Broker) validateMessageSenderAuth(sender models.User, clientAddr string) error {
+	_, claims, err := broker.authProvider.DecodeToken(sender.Auth)
+	if err != nil {
+		return err
+	}
+
+	if err = claims.Valid(); err != nil {
+		return entity.InvalidToken{Reason: err.Error()}
+	}
+
+	if !claims.VerifyAudience(fmt.Sprintf("client %s", clientAddr), true) {
+		return entity.InvalidToken{Reason: "token audience client mismatch"}
+	}
+
+	if claims.Subject != strconv.Itoa(sender.ID) {
+		return entity.InvalidToken{Reason: "token user ID mismatch"}
+	}
+
+	return nil
 }
 
 func (broker Broker) run() {

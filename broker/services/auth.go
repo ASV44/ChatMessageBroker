@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"fmt"
+	"time"
 
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/google/uuid"
@@ -19,36 +20,50 @@ const (
 // AuthProvider defines operations of manging clients authentication
 type AuthProvider interface {
 	GenerateNewJWT(*jwt.RegisteredClaims) (string, error)
+	GenerateNewUserJWT(userID string, clientAddr string) (string, error)
 	DecodeToken(string) (*jwt.Token, jwt.RegisteredClaims, error)
 }
 
 // AuthService implements AuthProvider and manages clients authentication
 type AuthService struct {
-	privateKey *rsa.PrivateKey
-	keyID      string
+	tokenIssuer string
+	privateKey  *rsa.PrivateKey
+	keyID       string
 }
 
 // NewAuthService creates new instance of AuthService
-func NewAuthService() (AuthService, error) {
+func NewAuthService(tokenIssuer string) (AuthService, error) {
 	privateKey, err := rsa.GenerateKey(rand.Reader, bitSize)
 	if err != nil {
 		return AuthService{}, err
 	}
 
 	return AuthService{
-		privateKey: privateKey,
-		keyID:      uuid.NewString(),
+		tokenIssuer: tokenIssuer,
+		privateKey:  privateKey,
+		keyID:       uuid.NewString(),
 	}, nil
 }
 
 // GenerateNewJWT creates new JWT token signed by RSA256 private key
 func (a AuthService) GenerateNewJWT(claims *jwt.RegisteredClaims) (string, error) {
+	claims.Issuer = a.tokenIssuer
 	// Create token with claims
 	token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
 	token.Header[KeyIDKey] = a.keyID
 
 	// Generate encoded token
 	return token.SignedString(a.privateKey)
+}
+
+// GenerateNewUserJWT creates new JWT token with dedicated user specific configuration
+func (a AuthService) GenerateNewUserJWT(userID string, clientAddr string) (string, error) {
+	return a.GenerateNewJWT(&jwt.RegisteredClaims{
+		Subject:   userID,
+		Audience:  jwt.ClaimStrings{fmt.Sprintf("client %s", clientAddr)},
+		ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour * 12)),
+		IssuedAt:  jwt.NewNumericDate(time.Now()),
+	})
 }
 
 // DecodeToken parse provided JWT token string and returns token instance and token claims

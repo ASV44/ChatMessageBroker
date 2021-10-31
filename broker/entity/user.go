@@ -6,10 +6,11 @@ import (
 
 // User represents entity of broker user
 type User struct {
-	ID         int
-	NickName   string
-	Connection common.Connection
-	Channels   []string
+	ID           int
+	NickName     string
+	PasswordHash string
+	Connection   common.Connection
+	Channels     []string
 }
 
 func (user User) IsSubscribedToChannel(name string) bool {

@@ -11,7 +11,7 @@ type Dispatcher struct {
 	workspace *Workspace
 	ConnectionManager
 	CommandDispatcher
-	services.Transmitter
+	services.AuthProvider
 }
 
 // NewDispatcher creates new instance of Dispatcher
@@ -19,13 +19,11 @@ func NewDispatcher(
 	workspace *Workspace,
 	connectionManager ConnectionManager,
 	cmdDispatcher CommandDispatcher,
-	transmitter services.Transmitter,
 ) Dispatcher {
 	return Dispatcher{
 		workspace:         workspace,
 		ConnectionManager: connectionManager,
 		CommandDispatcher: cmdDispatcher,
-		Transmitter:       transmitter,
 	}
 }
 

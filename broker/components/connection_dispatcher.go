@@ -2,10 +2,12 @@ package broker
 
 import (
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/ASV44/chat-message-broker/broker/entity"
 	"github.com/ASV44/chat-message-broker/broker/models"
+	"github.com/ASV44/chat-message-broker/broker/services"
 	"github.com/ASV44/chat-message-broker/common"
 )
 
@@ -18,13 +20,22 @@ type ConnectionManager interface {
 type ConnectionDispatcher struct {
 	workspace     *Workspace
 	cmdDispatcher CommandDispatcher
+	hashing       services.PasswordHashing
+	auth          services.AuthProvider
 }
 
 // NewConnectionDispatcher creates new instance of ConnectionDispatcher
-func NewConnectionDispatcher(workspace *Workspace, cmdDispatcher CommandDispatcher) ConnectionDispatcher {
+func NewConnectionDispatcher(
+	workspace *Workspace,
+	cmdDispatcher CommandDispatcher,
+	hashing services.PasswordHashing,
+	auth services.AuthProvider,
+) ConnectionDispatcher {
 	return ConnectionDispatcher{
 		workspace:     workspace,
 		cmdDispatcher: cmdDispatcher,
+		hashing:       hashing,
+		auth:          auth,
 	}
 }
 
@@ -45,7 +56,7 @@ func (dispatcher ConnectionDispatcher) RegisterNewConnection(connection common.C
 		return user, err
 	}
 
-	err = dispatcher.sendSuccessfulRegistrationMessage(connection)
+	err = dispatcher.sendSuccessfulAuthenticationMessage(connection)
 	if err != nil {
 		fmt.Println("Could not send successful registration message ", err)
 		dispatcher.workspace.RemoveUser(user)
@@ -53,7 +64,12 @@ func (dispatcher ConnectionDispatcher) RegisterNewConnection(connection common.C
 		return user, err
 	}
 
-	userModel := models.User{ID: user.ID, NickName: user.NickName}
+	jwt, err := dispatcher.auth.GenerateNewUserJWT(
+		strconv.Itoa(user.ID),
+		connection.NetworkConnection.RemoteAddr().String(),
+	)
+
+	userModel := models.User{ID: user.ID, NickName: user.NickName, Auth: jwt}
 	err = connection.SendMessage(userModel)
 	if err != nil {
 		fmt.Println("Could not send user account data ", err)
@@ -78,8 +94,21 @@ func (dispatcher ConnectionDispatcher) registerInWorkspace(connection common.Con
 			return entity.User{}, err
 		}
 
+		if user, ok := dispatcher.workspace.users[accountData.NickName]; ok {
+			return dispatcher.signInExistingUserInWorkspace(user, accountData, connection)
+		}
+
+		passwordHash, err := dispatcher.hashing.HashPassword(accountData.Password)
+		if err != nil {
+			fmt.Println("User password hashing failed", err)
+		}
+
 		user, err := dispatcher.workspace.RegisterNewUser(
-			entity.RegistrationData{NickName: accountData.NickName, Connection: connection},
+			entity.RegistrationData{
+				NickName:     accountData.NickName,
+				PasswordHash: passwordHash,
+				Connection:   connection,
+			},
 		)
 		switch err.(type) {
 		case nil:
@@ -93,10 +122,28 @@ func (dispatcher ConnectionDispatcher) registerInWorkspace(connection common.Con
 	}
 }
 
-func (dispatcher ConnectionDispatcher) sendSuccessfulRegistrationMessage(connection common.Connection) error {
+func (dispatcher ConnectionDispatcher) signInExistingUserInWorkspace(
+	user entity.User,
+	accountData models.AccountData,
+	connection common.Connection,
+) (entity.User, error) {
+	if err := dispatcher.hashing.CompareHashAndPassword(user.PasswordHash, accountData.Password); err != nil {
+		if err = dispatcher.sendRegistrationError(connection, err); err != nil {
+			fmt.Println("Could not send registration error", err)
+		}
+
+		return entity.User{}, err
+	}
+	user.Connection = connection
+	dispatcher.workspace.users[user.NickName] = user
+
+	return user, nil
+}
+
+func (dispatcher ConnectionDispatcher) sendSuccessfulAuthenticationMessage(connection common.Connection) error {
 	return connection.SendMessage(
 		models.OutgoingMessage{
-			Text: "Successfully registered in workspace",
+			Text: "Successfully authenticated in workspace",
 			Time: time.Now(),
 		},
 	)
